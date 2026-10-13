@@ -91,7 +91,6 @@ python3 scripts/build_agents.py
 Skills are copied from their authors. All credit goes to them:
 
 - [mattpocock/skills](https://github.com/mattpocock/skills): `ask-matt`, `code-review`, `codebase-design`, `diagnosing-bugs`, `domain-modeling`, `grill-me`, `grill-with-docs`, `grilling`, `handoff`, `implement`, `implement-spec`, `improve-codebase-architecture`, `loop-me`, `prototype`, `research`, `resolving-merge-conflicts`, `setup-matt-pocock-skills`, `tdd`, `to-questionnaire`, `to-spec`, `to-tickets`, `triage`, `wait-what`, `wayfinder`, `wizard`, `writing-for-agents`
-- [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman): `caveman`
 - Apache-2.0 skills, with the license kept in each folder: `figma`, `gh-address-comments`, `gh-fix-ci`, `linear`, `security-best-practices`, `security-ownership-map`, `sentry`, `yeet`
 
 If you wrote a skill here and want a different credit or want it removed, open an issue.
