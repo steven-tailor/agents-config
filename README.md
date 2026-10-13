@@ -24,6 +24,15 @@ curl -fsSL https://raw.githubusercontent.com/steven-tailor/agents-config/main/in
 
 Run the same install command again. It pulls the latest version and relinks everything.
 
+Updates never delete what Claude Code, Codex or you created:
+
+| What | On update |
+| --- | --- |
+| Your own agents and skills in `~/.claude` / `~/.codex` | untouched |
+| Agents edited through the tool | kept, with a warning |
+| Real files in the way | renamed to `<name>.backup-<timestamp>` |
+| Local changes in `~/.agents-config` | update skipped |
+
 ## Credits
 
 Skills are copied from their authors. All credit goes to them:

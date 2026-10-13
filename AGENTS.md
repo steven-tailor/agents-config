@@ -19,14 +19,20 @@ build/                   Generated, gitignored. Never edit or commit
 
 | Repo path | `~/.claude` (`CLAUDE_CONFIG_DIR`) | `~/.codex` (`CODEX_HOME`) |
 | --- | --- | --- |
-| `build/<tool>/agents` | `agents` | `agents` |
-| `skills` | `skills` | `skills` |
+| `build/<tool>/agents/*` | `agents/<entry>` | `agents/<entry>` |
+| `skills/*` | `skills/<entry>` | `skills/<entry>` |
 | `Codex/AGENTS.md` | — | `AGENTS.md` |
 | `Codex/keybindings.json` | — | `keybindings.json` |
 
-- Existing symlinks are repointed; real files and dirs are moved to `<name>.backup-<timestamp>`.
-- Piped from curl, it clones or updates `AGENTS_CONFIG_REPO` into `AGENTS_CONFIG_DIR` (default `~/.agents-config`) and re-runs from there.
-- `--dry-run` prints actions without changing tool config dirs; the build still runs.
+Rule: never destroy what the tools or the user created.
+
+- `agents/` and `skills/` in tool dirs are real folders with one symlink per managed entry. Anything else in them stays untouched.
+- Managed entries are git-tracked files (skills) or names in `build/<tool>/manifest.json` (agents). Never derive them from folder contents: tools may have written into the clone.
+- Real files and folders in the way are renamed to `<name>.backup-<timestamp>`, never deleted.
+- Links into the repo whose source is gone are removed.
+- Older installs linked whole folders. They are converted to real folders and unmanaged entries are copied over; `skills/synced` (Claude) and `skills/.system` (Codex) go only to their own tool.
+- Piped from curl, it clones or updates `AGENTS_CONFIG_REPO` into `AGENTS_CONFIG_DIR` (default `~/.agents-config`) and re-runs from there. The update is skipped if the clone has local changes or cannot fast-forward.
+- `--dry-run` prints actions without changing tool config dirs; the build still runs. `--force` overwrites generated agents edited outside the repo.
 
 ## Agents
 
@@ -56,6 +62,8 @@ Only in the Codex version.
 - `effort` maps to Claude `effort` and Codex `model_reasoning_effort`.
 - Codex `name` swaps hyphens for underscores. `sandbox_mode` defaults to `workspace-write` when Claude `tools` include an editing tool, else `read-only`; set it in `[codex]` to override.
 - `<!-- claude -->` / `<!-- codex -->` blocks keep instructions for one tool only. They cannot nest.
+
+The generator records each output's hash in `build/<tool>/manifest.json`. A generated file changed outside the generator (a tool editing it through its symlink) is kept and printed as `kept <file>`; `--force` overwrites it. Stale outputs are removed only if unchanged.
 
 Validate after editing: `python3 scripts/build_agents.py`.
 
