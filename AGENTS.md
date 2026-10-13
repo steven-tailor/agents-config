@@ -28,7 +28,7 @@ Rule: never destroy what the tools or the user created.
 - `agents/` and `skills/` in tool dirs are real folders with one symlink per managed entry. Anything else in them stays untouched.
 - Managed entries are git-tracked files (skills) or names in `build/<tool>/manifest.json` (agents). Never derive them from folder contents: tools may have written into the clone.
 - Real files and folders in the way are renamed to `<name>.backup-<timestamp>`, never deleted.
-- Links into the repo whose source is gone are removed. For files no longer synced, add the target to `RETIRED` in `install.sh`: its broken link is removed and the newest `<name>.backup-*` restored.
+- Links into the repo whose source is gone are removed.
 - Older installs linked whole folders. They are converted to real folders and unmanaged entries are copied over; `skills/synced` (Claude) and `skills/.system` (Codex) go only to their own tool.
 - Piped from curl, it clones or updates `AGENTS_CONFIG_REPO` into `AGENTS_CONFIG_DIR` (default `~/.agents-config`) and re-runs from there. The update is skipped if the clone has local changes or cannot fast-forward.
 - `--update` pulls the clone the script lives in (same safety checks), then re-runs the new version.
