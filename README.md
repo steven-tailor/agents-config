@@ -26,7 +26,13 @@ curl -fsSL https://raw.githubusercontent.com/steven-tailor/agents-config/main/in
 
 ## Update
 
-Run the same install command again. It pulls the latest version and relinks everything.
+Automatic: the installer adds a daily job (12:00, launchd on macOS, cron on Linux) that pulls the latest version and relinks. Log: `~/.agents-config/build/auto-update.log`.
+
+Manual: run the install command again. To turn the daily job off:
+
+```bash
+~/.agents-config/install.sh --no-auto-update
+```
 
 Updates never delete what Claude Code, Codex or you created:
 

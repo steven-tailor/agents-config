@@ -32,6 +32,8 @@ Rule: never destroy what the tools or the user created.
 - Links into the repo whose source is gone are removed.
 - Older installs linked whole folders. They are converted to real folders and unmanaged entries are copied over; `skills/synced` (Claude) and `skills/.system` (Codex) go only to their own tool.
 - Piped from curl, it clones or updates `AGENTS_CONFIG_REPO` into `AGENTS_CONFIG_DIR` (default `~/.agents-config`) and re-runs from there. The update is skipped if the clone has local changes or cannot fast-forward.
+- `--update` pulls the clone the script lives in (same safety checks), then re-runs the new version.
+- Auto-update: every install registers a daily `install.sh --update` job, label `agents-config.update` (launchd plist in `~/Library/LaunchAgents` on macOS, tagged crontab line elsewhere), logging to `build/auto-update.log`. It captures the current `PATH`, `CLAUDE_CONFIG_DIR` and `CODEX_HOME`. Rewritten only when its content changes; `--no-auto-update` removes it.
 - `--dry-run` prints actions without changing tool config dirs; the build still runs. `--force` overwrites generated agents edited outside the repo.
 
 ## Agents
