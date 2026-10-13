@@ -1,0 +1,4 @@
+interface:
+  display_name: "Save to Obsidian"
+  short_description: "Store editable Markdown in your Obsidian vault"
+  default_prompt: "Use $save-to-obsidian to save this as an editable Markdown spec."
