@@ -75,12 +75,51 @@ done
 
 # --- Bootstrap ---------------------------------------------------------------
 
-# update_repo <clone>: fast-forward it unless that could lose local changes.
+# shallow_update <clone> <branch>: move a shallow clone to the latest commit
+# and drop everything older, so only the current version is stored.
+# `git checkout` refuses to overwrite untracked files, so nothing is lost.
+shallow_update() {
+  local git=(git -C "$1") before remote
+  before="$("${git[@]}" rev-parse HEAD)"
+  remote="$("${git[@]}" rev-parse "origin/$2")"
+  "${git[@]}" fetch --quiet --depth 1 origin "$2" || return 1
+  if ! "${git[@]}" checkout --quiet -B "$2" FETCH_HEAD 2>/dev/null; then
+    # Keep origin/<branch> at HEAD, or the next run sees HEAD as a local commit.
+    "${git[@]}" update-ref "refs/remotes/origin/$2" "$remote"
+    return 1
+  fi
+  if [[ "$("${git[@]}" rev-parse HEAD)" != "$before" ]]; then
+    "${git[@]}" reflog expire --expire=now --all
+    "${git[@]}" gc --quiet --prune=now
+  fi
+}
+
+# update_repo <clone>: update it unless that could lose local changes.
+# Shallow clones made by this script keep only the latest commit; full clones
+# (e.g. a development checkout) get a plain fast-forward and keep history.
 update_repo() {
-  if [[ -n "$(git -C "$1" status --porcelain --untracked-files=no)" ]]; then
+  local git=(git -C "$1") branch ok=0
+  branch="$("${git[@]}" symbolic-ref --quiet --short HEAD || true)"
+
+  if [[ -z "$branch" ]]; then
+    item "⚠" "$Y" "Update skipped" "no branch checked out in $(tilde "$1")"
+    return
+  elif [[ -n "$("${git[@]}" status --porcelain --untracked-files=no)" ]]; then
     item "⚠" "$Y" "Update skipped" "local changes in $(tilde "$1")"
-  elif git -C "$1" pull --ff-only --quiet 2>/dev/null; then
-    item "⇣" "$C" "Updated" "$(tilde "$1") · $(git -C "$1" log -1 --format=%h)"
+    return
+  elif [[ -n "$("${git[@]}" rev-list "origin/$branch..HEAD" 2>/dev/null)" ]]; then
+    item "⚠" "$Y" "Update skipped" "local commits in $(tilde "$1")"
+    return
+  fi
+
+  if [[ "$("${git[@]}" rev-parse --is-shallow-repository)" == true ]]; then
+    shallow_update "$1" "$branch" && ok=1
+  else
+    "${git[@]}" pull --ff-only --quiet 2>/dev/null && ok=1
+  fi
+
+  if (( ok )); then
+    item "⇣" "$C" "Updated" "$(tilde "$1") · $("${git[@]}" log -1 --format=%h)"
   else
     item "⚠" "$Y" "Update failed" "keeping current version"
   fi
@@ -95,8 +134,7 @@ if [[ -z "$SELF" || ! -f "$SELF" || ! -d "$(dirname "$SELF")/agents" ]]; then
     update_repo "$INSTALL_DIR"
   else
     item "⇣" "$C" "Cloning" "$(tilde "$INSTALL_DIR")"
-    # Shallow: users need the files, not the history. Plain fast-forward
-    # pulls then fetch only new commits (pull --depth breaks fast-forwards).
+    # Shallow: users get only the latest version; see update_repo.
     git clone --quiet --depth 1 "$REPO_URL" "$INSTALL_DIR"
   fi
   exec bash "$INSTALL_DIR/install.sh" "${PASS[@]+"${PASS[@]}"}"
