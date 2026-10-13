@@ -2,11 +2,17 @@
 # Build agents for each installed tool (Claude Code, Codex) from agents/ and
 # symlink them, plus shared skills and Codex configs, into the tool config dirs.
 # Re-run after editing agents/ to regenerate.
-# Idempotent: existing symlinks are repointed, real files/dirs are backed up
-# as <name>.backup-<timestamp> before linking.
 #
-# Usage: ./install.sh [--dry-run]
+# Never destroys anything the tools or the user created:
+# - agents/ and skills/ in the tool config dirs are real folders holding one
+#   symlink per managed entry, so anything else in them is left alone;
+# - real files and folders in the way are renamed to <name>.backup-<timestamp>;
+# - generated agents changed outside the repo are kept, not overwritten;
+# - updates are skipped when the clone has local changes.
+#
+# Usage: ./install.sh [--dry-run] [--force]
 #        curl -fsSL <raw install.sh URL> | bash [-s -- --dry-run]
+# --force overwrites generated agents that were changed outside the repo.
 
 set -euo pipefail
 
@@ -54,12 +60,15 @@ tick() { STEP=$(( STEP + 1 )); bar; }
 # INSTALL_DIR and re-run from there, since the symlinks point into the clone.
 SELF="${BASH_SOURCE[0]:-}"
 if [[ -z "$SELF" || ! -f "$SELF" || ! -d "$(dirname "$SELF")/agents" ]]; then
-  if [[ -d "$INSTALL_DIR/.git" ]]; then
-    item "⇣" "$C" "Updating" "$(tilde "$INSTALL_DIR")"
-    git -C "$INSTALL_DIR" pull --ff-only --quiet
-  else
+  if [[ ! -d "$INSTALL_DIR/.git" ]]; then
     item "⇣" "$C" "Cloning" "$(tilde "$INSTALL_DIR")"
     git clone --quiet "$REPO_URL" "$INSTALL_DIR"
+  elif [[ -n "$(git -C "$INSTALL_DIR" status --porcelain --untracked-files=no)" ]]; then
+    item "⚠" "$Y" "Update skipped" "local changes in $(tilde "$INSTALL_DIR")"
+  elif git -C "$INSTALL_DIR" pull --ff-only --quiet 2>/dev/null; then
+    item "⇣" "$C" "Updated" "$(tilde "$INSTALL_DIR")"
+  else
+    item "⚠" "$Y" "Update failed" "keeping current version"
   fi
   exec bash "$INSTALL_DIR/install.sh" "$@"
 fi
@@ -71,45 +80,152 @@ CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 DRY_RUN=0
-LINKED=0 RELINKED=0 BACKED_UP=0 UP_TO_DATE=0
+FORCE=()
+LINKED=0 RELINKED=0 BACKED_UP=0 UP_TO_DATE=0 WARNINGS=0
 
-[[ "${1:-}" == "--dry-run" ]] && DRY_RUN=1
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    --force) FORCE=(--force) ;;
+    *) echo "Unknown option: $arg" >&2; exit 2 ;;
+  esac
+done
 
-# <repo path>:<name in tool config dir>
-CLAUDE_LINKS=("build/claude/agents:agents" "skills:skills")
+# <repo path>:<name in tool config dir>[:entry to never carry over]. A trailing
+# / links every entry of the folder into a real folder instead of linking the
+# folder itself. skills/synced is Claude's and skills/.system is Codex's.
+CLAUDE_LINKS=("build/claude/agents/:agents" "skills/:skills:.system")
 CODEX_LINKS=(
   "Codex/AGENTS.md:AGENTS.md"
-  "build/codex/agents:agents"
+  "build/codex/agents/:agents"
   "Codex/keybindings.json:keybindings.json"
-  "skills:skills"
+  "skills/:skills:synced"
 )
 
 run() { (( DRY_RUN )) || "$@"; }
 
-# link <source in repo> <target path>
-link() {
-  local src="$REPO/$1" dst="$2" name="${2##*/}"
+# link_one <source> <target>: link and set RESULT to what happened.
+link_one() {
+  local src="$1" dst="$2"
 
   if [[ ! -e "$src" ]]; then
-    item "–" "$Y" "$name" "missing in repo"
+    RESULT=missing
   elif [[ -L "$dst" && "$(readlink "$dst")" == "$src" ]]; then
-    item "✓" "$G" "$name" "up to date"
+    RESULT=ok
     UP_TO_DATE=$(( UP_TO_DATE + 1 ))
   elif [[ -L "$dst" ]]; then
     run rm "$dst"
     run ln -s "$src" "$dst"
-    item "↻" "$C" "$name" "relinked"
+    RESULT=relinked
     RELINKED=$(( RELINKED + 1 ))
   elif [[ -e "$dst" ]]; then
     run mv "$dst" "$dst.backup-$STAMP"
     run ln -s "$src" "$dst"
-    item "⤓" "$Y" "$name" "backed up → $name.backup-$STAMP"
+    RESULT=backup
     BACKED_UP=$(( BACKED_UP + 1 ))
   else
     run ln -s "$src" "$dst"
-    item "+" "$G" "$name" "linked"
+    RESULT=linked
     LINKED=$(( LINKED + 1 ))
   fi
+}
+
+# link_file <source in repo> <target path>
+link_file() {
+  local name="${2##*/}"
+  link_one "$REPO/$1" "$2"
+  case "$RESULT" in
+    missing)  item "–" "$Y" "$name" "missing in repo" ;;
+    ok)       item "✓" "$G" "$name" "up to date" ;;
+    relinked) item "↻" "$C" "$name" "relinked" ;;
+    backup)   item "⤓" "$Y" "$name" "backed up → $name.backup-$STAMP" ;;
+    linked)   item "+" "$G" "$name" "linked" ;;
+  esac
+  tick
+}
+
+# link_dir <source folder in repo> <target folder>
+# Links each entry of the source folder into a real target folder. Entries the
+# tool or the user put there are left untouched.
+# managed_entries <source folder>: names this repo owns in that folder. Agents
+# come from the build manifest, everything else from git, so files the tools
+# wrote into the clone are never mistaken for ours.
+managed_entries() {
+  local src="$1"
+  if [[ -f "${src%/*}/manifest.json" ]]; then
+    python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))))' "${src%/*}/manifest.json"
+  else
+    git -C "$REPO" ls-files -- "${src#"$REPO"/}" | sed "s|^${src#"$REPO"/}/||; s|/.*||" | sort -u
+  fi
+}
+
+# link_dir <source folder in repo> <target folder> [entry to never carry over]
+# Links each entry of the source folder into a real target folder. Entries the
+# tool or the user put there are left untouched.
+link_dir() {
+  local src="$REPO/${1%/}" dst="$2" skip="${3:-}" name="${2##*/}" entry base old
+  local new=0 copied=0 backups=0 removed=0 own=0 total=0
+  local managed=()
+
+  while IFS= read -r base; do
+    [[ -n "$base" && -e "$src/$base" ]] && managed+=("$base")
+  done < <(managed_entries "$src")
+  is_managed() { local m; for m in "${managed[@]+"${managed[@]}"}"; do [[ "$m" == "$1" ]] && return 0; done; return 1; }
+
+  # Older installs linked the whole folder, possibly shared by both tools.
+  # Turn it into a real folder and copy over whatever the tools wrote through
+  # that link; the originals stay where they are.
+  if [[ -L "$dst" ]]; then
+    old="$(cd "$dst" 2>/dev/null && pwd -P || true)"
+    run rm "$dst"
+    run mkdir -p "$dst"
+    if [[ -n "$old" ]]; then
+      for entry in "$old"/* "$old"/.[!.]*; do
+        [[ -e "$entry" ]] || continue
+        base="${entry##*/}"
+        is_managed "$base" && continue
+        [[ "$base" == .DS_Store || "$base" == "$skip" ]] && continue
+        run cp -R "$entry" "$dst/"
+        copied=$(( copied + 1 ))
+      done
+    fi
+  elif [[ -e "$dst" && ! -d "$dst" ]]; then
+    run mv "$dst" "$dst.backup-$STAMP"
+    BACKED_UP=$(( BACKED_UP + 1 ))
+    run mkdir -p "$dst"
+  else
+    run mkdir -p "$dst"
+  fi
+
+  for base in "${managed[@]+"${managed[@]}"}"; do
+    link_one "$src/$base" "$dst/$base"
+    total=$(( total + 1 ))
+    case "$RESULT" in
+      relinked|linked) new=$(( new + 1 )) ;;
+      backup) backups=$(( backups + 1 )) ;;
+    esac
+  done
+
+  # Drop links to entries that were removed from the repo; count the rest.
+  for entry in "$dst"/* "$dst"/.[!.]*; do
+    [[ -e "$entry" || -L "$entry" ]] || continue
+    base="${entry##*/}"
+    is_managed "$base" && continue
+    if [[ -L "$entry" && "$(readlink "$entry")" == "$REPO"/* && ! -e "$entry" ]]; then
+      run rm "$entry"
+      removed=$(( removed + 1 ))
+    elif [[ "$base" != .DS_Store ]]; then
+      own=$(( own + 1 ))
+    fi
+  done
+
+  local detail="$total linked"
+  (( new )) && detail+=" · $new new"
+  (( backups )) && detail+=" · $backups backed up"
+  (( removed )) && detail+=" · $removed removed"
+  (( copied )) && detail+=" · $copied carried over"
+  (( own )) && detail+=" · $own yours untouched"
+  item "✓" "$G" "$name/" "$detail"
   tick
 }
 
@@ -118,19 +234,32 @@ found() { [[ -d "$2" ]] || command -v "$1" >/dev/null; }
 
 # install_tool <target> <label> <config dir> <links...>
 install_tool() {
-  local target="$1" label="$2" dir="$3" pair count
+  local target="$1" label="$2" dir="$3" pair line count kept=()
   shift 3
 
   say ""
   say "  $B$label$X  $D$(tilde "$dir")$X"
   run mkdir -p "$dir"
-  python3 "$REPO/scripts/build_agents.py" --target "$target" >/dev/null
-  count=$(find "$REPO/build/$target/agents" -type f | wc -l | tr -d ' ')
+
+  while IFS= read -r line; do
+    [[ "$line" == kept\ * ]] && kept+=("${line#kept }")
+  done < <(python3 "$REPO/scripts/build_agents.py" --target "$target" "${FORCE[@]+"${FORCE[@]}"}")
+  count=$(managed_entries "$REPO/build/$target/agents" | wc -l | tr -d ' ')
   item "⚙" "$G" "build agents" "$count generated"
+  for line in "${kept[@]+"${kept[@]}"}"; do
+    item "⚠" "$Y" "$line" "edited outside repo · kept (move changes to agents/, then --force)"
+    WARNINGS=$(( WARNINGS + 1 ))
+  done
   tick
 
+  local src dst_name skip
   for pair in "$@"; do
-    link "${pair%%:*}" "$dir/${pair#*:}"
+    IFS=: read -r src dst_name skip <<< "$pair"
+    if [[ "$src" == */ ]]; then
+      link_dir "$src" "$dir/$dst_name" "$skip"
+    else
+      link_file "$src" "$dir/$dst_name"
+    fi
   done
 }
 
@@ -162,9 +291,11 @@ fi
 (( HAS_CODEX )) && install_tool codex "Codex" "$CODEX_DIR" "${CODEX_LINKS[@]}"
 
 summary=""
-for part in "$LINKED linked" "$RELINKED relinked" "$BACKED_UP backed up" "$UP_TO_DATE up to date"; do
+for part in "$LINKED linked" "$RELINKED relinked" "$BACKED_UP backed up" \
+  "$UP_TO_DATE up to date" "$WARNINGS warnings"; do
   [[ "$part" == 0\ * ]] || summary+="${summary:+ · }$part"
 done
+
 # Keep the finished bar on screen and stop redrawing it.
 (( TTY )) && printf '\n'
 TOTAL=0

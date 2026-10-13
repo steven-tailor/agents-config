@@ -27,13 +27,18 @@ Source format (agents/<name>.md):
 Codex defaults: `name` uses underscores instead of hyphens; `sandbox_mode` is
 `workspace-write` when Claude tools include an editing tool, else `read-only`.
 
-Usage: build_agents.py [--target claude|codex ...] [--out DIR]
+Generated files are tracked by hash in build/<target>/manifest.json. A file
+changed outside the generator (e.g. edited by the tool through its symlink) is
+kept and reported as `kept <file>` instead of being overwritten; pass --force to
+overwrite. Stale generated files are removed only if unchanged.
+
+Usage: build_agents.py [--target claude|codex ...] [--out DIR] [--force]
 """
 
 import argparse
+import hashlib
 import json
 import re
-import shutil
 import sys
 import tomllib
 from pathlib import Path
@@ -141,10 +146,49 @@ def render_codex(meta, body):
 RENDERERS = {"claude": (render_claude, ".md"), "codex": (render_codex, ".toml")}
 
 
+def digest(data):
+    return hashlib.sha256(data.encode()).hexdigest()
+
+
+def write_outputs(out_dir, files, force):
+    """Write {filename: content}, never clobbering files changed by others.
+
+    Returns the names of files that were kept because they changed outside
+    the generator.
+    """
+    manifest_path = out_dir.parent / "manifest.json"
+    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else None
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    def ours(path):
+        # Without a manifest (older builds) nothing is known to be ours, so
+        # only files identical to the new output are rewritten.
+        return manifest is not None and manifest.get(path.name) == digest(path.read_text())
+
+    for path in out_dir.iterdir():
+        if path.name not in files and manifest and path.name in manifest and ours(path):
+            path.unlink()
+
+    kept, new_manifest = [], {}
+    for name, content in files.items():
+        path = out_dir / name
+        if path.exists() and not force and not ours(path) and path.read_text() != content:
+            kept.append(name)
+            if manifest and name in manifest:
+                new_manifest[name] = manifest[name]
+            continue
+        path.write_text(content)
+        new_manifest[name] = digest(content)
+
+    manifest_path.write_text(json.dumps(new_manifest, indent=2, sort_keys=True) + "\n")
+    return kept
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--target", action="append", choices=TARGETS)
     parser.add_argument("--out", type=Path, default=REPO / "build")
+    parser.add_argument("--force", action="store_true", help="overwrite changed files")
     args = parser.parse_args()
 
     sources = sorted(SOURCE_DIR.glob("*.md"))
@@ -153,11 +197,10 @@ def main():
     for target in args.target or TARGETS:
         render, ext = RENDERERS[target]
         out_dir = args.out / target / "agents"
-        shutil.rmtree(out_dir, ignore_errors=True)
-        out_dir.mkdir(parents=True)
-        for stem, meta, body in parsed:
-            (out_dir / f"{stem}{ext}").write_text(render(meta, body))
-        print(f"{target}: {len(parsed)} agents -> {out_dir.relative_to(REPO)}")
+        files = {f"{stem}{ext}": render(meta, body) for stem, meta, body in parsed}
+        for name in write_outputs(out_dir, files, args.force):
+            print(f"kept {name}")
+        print(f"{target}: {len(files)} agents -> {out_dir}")
 
 
 if __name__ == "__main__":
