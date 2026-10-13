@@ -9,24 +9,22 @@ Most skills here are written by other people. This repo only collects them; see 
 ## Install
 
 ```bash
-git clone https://github.com/steven-tailor/agents-config.git ~/.agents-config && ~/.agents-config/install.sh
+curl -fsSL https://raw.githubusercontent.com/steven-tailor/agents-config/main/install.sh | bash
 ```
 
-Requires `git`, `bash`, and Python 3.11+. Keep the clone where it is: the installed configs are symlinks into it.
+Requires `git`, `bash`, and Python 3.11+. The script clones this repo into `~/.agents-config` (override with `AGENTS_CONFIG_DIR`) and links your configs into it, so keep that folder.
 
-Preview the changes without touching anything:
+Preview the changes first. The repo is still cloned, but your configs stay untouched:
 
 ```bash
-~/.agents-config/install.sh --dry-run
+curl -fsSL https://raw.githubusercontent.com/steven-tailor/agents-config/main/install.sh | bash -s -- --dry-run
 ```
 
 ## Update
 
-```bash
-git -C ~/.agents-config pull && ~/.agents-config/install.sh
-```
+Run the same install command again. It pulls the latest version and relinks everything.
 
-Re-run `install.sh` after any change to `agents/`, so the generated agent files are rebuilt.
+After editing `agents/` in your clone, run `~/.agents-config/install.sh` to rebuild the generated agent files.
 
 ## What gets installed
 
