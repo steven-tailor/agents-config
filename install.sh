@@ -10,9 +10,11 @@
 # - generated agents changed outside the repo are kept, not overwritten;
 # - updates are skipped when the clone has local changes.
 #
-# Usage: ./install.sh [--dry-run] [--force]
-#        curl -fsSL <raw install.sh URL> | bash [-s -- --dry-run]
-# --force overwrites generated agents that were changed outside the repo.
+# Usage: ./install.sh [--dry-run] [--force] [--update] [--no-auto-update]
+#        curl -fsSL <raw install.sh URL> | bash [-s -- <options>]
+# --force           overwrite generated agents changed outside the repo
+# --update          pull the latest version of the clone before installing
+# --no-auto-update  remove the daily `install.sh --update` job (installed by default)
 
 set -euo pipefail
 
@@ -54,23 +56,52 @@ item() { say "  $2$1$X $(printf '%-17s' "$3") $D${4:-}$X"; }
 
 tick() { STEP=$(( STEP + 1 )); bar; }
 
+# --- Options -----------------------------------------------------------------
+
+DRY_RUN=0 UPDATE=0 AUTO_UPDATE=1
+FORCE=()
+PASS=()  # options for the re-run after an update
+
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    --force) FORCE=(--force) ;;
+    --update) UPDATE=1; continue ;;
+    --no-auto-update) AUTO_UPDATE=0 ;;
+    *) echo "Unknown option: $arg" >&2; exit 2 ;;
+  esac
+  PASS+=("$arg")
+done
+
 # --- Bootstrap ---------------------------------------------------------------
 
-# Piped from curl there is no repo next to the script: clone or update it into
-# INSTALL_DIR and re-run from there, since the symlinks point into the clone.
-SELF="${BASH_SOURCE[0]:-}"
-if [[ -z "$SELF" || ! -f "$SELF" || ! -d "$(dirname "$SELF")/agents" ]]; then
-  if [[ ! -d "$INSTALL_DIR/.git" ]]; then
-    item "⇣" "$C" "Cloning" "$(tilde "$INSTALL_DIR")"
-    git clone --quiet "$REPO_URL" "$INSTALL_DIR"
-  elif [[ -n "$(git -C "$INSTALL_DIR" status --porcelain --untracked-files=no)" ]]; then
-    item "⚠" "$Y" "Update skipped" "local changes in $(tilde "$INSTALL_DIR")"
-  elif git -C "$INSTALL_DIR" pull --ff-only --quiet 2>/dev/null; then
-    item "⇣" "$C" "Updated" "$(tilde "$INSTALL_DIR")"
+# update_repo <clone>: fast-forward it unless that could lose local changes.
+update_repo() {
+  if [[ -n "$(git -C "$1" status --porcelain --untracked-files=no)" ]]; then
+    item "⚠" "$Y" "Update skipped" "local changes in $(tilde "$1")"
+  elif git -C "$1" pull --ff-only --quiet 2>/dev/null; then
+    item "⇣" "$C" "Updated" "$(tilde "$1") · $(git -C "$1" log -1 --format=%h)"
   else
     item "⚠" "$Y" "Update failed" "keeping current version"
   fi
-  exec bash "$INSTALL_DIR/install.sh" "$@"
+}
+
+# Piped from curl there is no repo next to the script: clone or update it into
+# INSTALL_DIR and re-run from there, since the symlinks point into the clone.
+# With --update, pull the clone the script lives in and re-run the new version.
+SELF="${BASH_SOURCE[0]:-}"
+if [[ -z "$SELF" || ! -f "$SELF" || ! -d "$(dirname "$SELF")/agents" ]]; then
+  if [[ -d "$INSTALL_DIR/.git" ]]; then
+    update_repo "$INSTALL_DIR"
+  else
+    item "⇣" "$C" "Cloning" "$(tilde "$INSTALL_DIR")"
+    git clone --quiet "$REPO_URL" "$INSTALL_DIR"
+  fi
+  exec bash "$INSTALL_DIR/install.sh" "${PASS[@]+"${PASS[@]}"}"
+elif (( UPDATE )); then
+  [[ -t 1 ]] || echo "--- $(date '+%Y-%m-%d %H:%M:%S')"
+  update_repo "$(cd "$(dirname "$SELF")" && pwd)"
+  exec bash "$SELF" "${PASS[@]+"${PASS[@]}"}"
 fi
 
 # --- Install -----------------------------------------------------------------
@@ -79,17 +110,7 @@ REPO="$(cd "$(dirname "$SELF")" && pwd)"
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-DRY_RUN=0
-FORCE=()
 LINKED=0 RELINKED=0 BACKED_UP=0 UP_TO_DATE=0 WARNINGS=0
-
-for arg in "$@"; do
-  case "$arg" in
-    --dry-run) DRY_RUN=1 ;;
-    --force) FORCE=(--force) ;;
-    *) echo "Unknown option: $arg" >&2; exit 2 ;;
-  esac
-done
 
 # <repo path>:<name in tool config dir>[:entry to never carry over]. A trailing
 # / links every entry of the folder into a real folder instead of linking the
@@ -229,6 +250,106 @@ link_dir() {
   tick
 }
 
+# --- Auto-update ---------------------------------------------------------------
+
+JOB_LABEL="agents-config.update"
+JOB_HOUR=12
+JOB_LOG="$REPO/build/auto-update.log"
+JOB_PLIST="$HOME/Library/LaunchAgents/$JOB_LABEL.plist"
+
+xml_escape() { local s="${1//&/&amp;}"; s="${s//</&lt;}"; echo "${s//>/&gt;}"; }
+
+launchd_plist() {
+  local env="" var
+  # launchd starts with a bare PATH; keep this shell's so python3, git and the
+  # tool CLIs resolve, plus any config dir overrides.
+  for var in PATH CLAUDE_CONFIG_DIR CODEX_HOME; do
+    [[ -n "${!var:-}" ]] && env+="    <key>$var</key><string>$(xml_escape "${!var}")</string>"$'\n'
+  done
+  cat <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>$JOB_LABEL</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>$(xml_escape "$REPO/install.sh")</string>
+    <string>--update</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+${env}  </dict>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>$JOB_HOUR</integer><key>Minute</key><integer>0</integer></dict>
+  <key>StandardOutPath</key><string>$(xml_escape "$JOB_LOG")</string>
+  <key>StandardErrorPath</key><string>$(xml_escape "$JOB_LOG")</string>
+</dict>
+</plist>
+PLIST
+}
+
+cron_line() {
+  printf '0 %d * * * PATH=%q %q %q --update >> %q 2>&1 # %s\n' \
+    "$JOB_HOUR" "$PATH" /bin/bash "$REPO/install.sh" "$JOB_LOG" "$JOB_LABEL"
+}
+
+# Register, refresh or remove the daily `install.sh --update` job.
+auto_update() {
+  local current wanted
+  if [[ "$(uname)" == Darwin ]]; then
+    if (( ! AUTO_UPDATE )); then
+      if [[ -f "$JOB_PLIST" ]]; then
+        run launchctl bootout "gui/$(id -u)" "$JOB_PLIST" 2>/dev/null || true
+        run rm "$JOB_PLIST"
+        item "–" "$Y" "auto-update" "removed"
+      else
+        item "○" "$D" "auto-update" "off"
+      fi
+      return
+    fi
+    wanted="$(launchd_plist)"
+    current="$(cat "$JOB_PLIST" 2>/dev/null || true)"
+    if [[ "$current" == "$wanted" ]]; then
+      item "✓" "$G" "auto-update" "daily $JOB_HOUR:00 · launchd"
+      return
+    fi
+    if (( ! DRY_RUN )); then
+      mkdir -p "${JOB_PLIST%/*}" "${JOB_LOG%/*}"
+      printf '%s\n' "$wanted" > "$JOB_PLIST"
+      launchctl bootout "gui/$(id -u)" "$JOB_PLIST" 2>/dev/null || true
+      launchctl bootstrap "gui/$(id -u)" "$JOB_PLIST"
+    fi
+    item "⏱" "$G" "auto-update" "daily $JOB_HOUR:00 · launchd · log $(tilde "$JOB_LOG")"
+  elif command -v crontab >/dev/null; then
+    current="$(crontab -l 2>/dev/null || true)"
+    local others
+    others="$(grep -v "# $JOB_LABEL\$" <<< "$current" || true)"
+    if (( ! AUTO_UPDATE )); then
+      if [[ "$current" != "$others" ]]; then
+        (( DRY_RUN )) || printf '%s\n' "$others" | crontab -
+        item "–" "$Y" "auto-update" "removed"
+      else
+        item "○" "$D" "auto-update" "off"
+      fi
+      return
+    fi
+    wanted="$(cron_line)"
+    if grep -qxF "$wanted" <<< "$current"; then
+      item "✓" "$G" "auto-update" "daily $JOB_HOUR:00 · cron"
+      return
+    fi
+    if (( ! DRY_RUN )); then
+      mkdir -p "${JOB_LOG%/*}"
+      printf '%s\n%s\n' "$others" "$wanted" | sed '/^$/d' | crontab -
+    fi
+    item "⏱" "$G" "auto-update" "daily $JOB_HOUR:00 · cron · log $(tilde "$JOB_LOG")"
+  else
+    item "○" "$D" "auto-update" "no launchd or cron · skip"
+  fi
+}
+
 # A tool counts as installed when its config dir or CLI exists.
 found() { [[ -d "$2" ]] || command -v "$1" >/dev/null; }
 
@@ -281,7 +402,9 @@ else
   item "○" "$D" "Codex" "not found · skip"
 fi
 
-if (( TOTAL == 0 )); then
+TOTAL=$(( TOTAL + 1 ))  # auto-update step
+
+if (( TOTAL == 1 )); then
   say ""
   say "  ${Y}Nothing to install: neither Claude Code nor Codex found.$X"
   exit 1
@@ -289,6 +412,10 @@ fi
 
 (( HAS_CLAUDE )) && install_tool claude "Claude Code" "$CLAUDE_DIR" "${CLAUDE_LINKS[@]}"
 (( HAS_CODEX )) && install_tool codex "Codex" "$CODEX_DIR" "${CODEX_LINKS[@]}"
+
+say ""
+auto_update
+tick
 
 summary=""
 for part in "$LINKED linked" "$RELINKED relinked" "$BACKED_UP backed up" \
