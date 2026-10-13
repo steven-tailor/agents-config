@@ -71,4 +71,5 @@ Validate after editing: `python3 scripts/build_agents.py`.
 
 - `skills/` is flat: one folder per skill.
 - Do not add default skills that ship with Claude Code or Codex. `skills/synced/` and `skills/.system/` are app-managed and gitignored.
+- Do not vendor [mattpocock/skills](https://github.com/mattpocock/skills). It is an external requirement users install themselves (see README `Requirements`); agents may depend on it.
 - When adding a third-party skill, keep its license file and credit the source in the README `Credits` section.

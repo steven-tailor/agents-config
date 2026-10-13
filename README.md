@@ -6,6 +6,10 @@ Most skills here are written by other people. This repo only collects them; see 
 
 > `Codex/AGENTS.md` holds my own global rules for Codex. Installing replaces your `~/.codex/AGENTS.md` (the old file is backed up), so read it first or delete it from your clone.
 
+## Requirements
+
+Install [mattpocock/skills](https://github.com/mattpocock/skills) first. Agents and skills here rely on them (for example, `implementer` and `ship` use `implement`). Follow the install instructions in that repo; setup differs per tool.
+
 ## Install
 
 ```bash
@@ -37,7 +41,6 @@ Updates never delete what Claude Code, Codex or you created:
 
 Skills are copied from their authors. All credit goes to them:
 
-- [mattpocock/skills](https://github.com/mattpocock/skills): `ask-matt`, `code-review`, `codebase-design`, `diagnosing-bugs`, `domain-modeling`, `grill-me`, `grill-with-docs`, `grilling`, `handoff`, `implement`, `implement-spec`, `improve-codebase-architecture`, `loop-me`, `prototype`, `research`, `resolving-merge-conflicts`, `setup-matt-pocock-skills`, `tdd`, `to-questionnaire`, `to-spec`, `to-tickets`, `triage`, `wait-what`, `wayfinder`, `wizard`, `writing-for-agents`
 - Apache-2.0 skills, with the license kept in each folder: `figma`, `gh-address-comments`, `gh-fix-ci`, `linear`, `security-best-practices`, `security-ownership-map`, `sentry`, `yeet`
 
 If you wrote a skill here and want a different credit or want it removed, open an issue.
