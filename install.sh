@@ -123,9 +123,11 @@ CLAUDE_LINKS=(
 CODEX_LINKS=(
   "global/AGENTS.md:AGENTS.md"
   "build/codex/agents/:agents"
-  "Codex/keybindings.json:keybindings.json"
   "skills/:skills:synced"
 )
+
+# Files earlier versions linked into tool dirs, as <tool dir>/<name>.
+RETIRED=("$CODEX_DIR/keybindings.json")
 
 run() { (( DRY_RUN )) || "$@"; }
 
@@ -169,6 +171,21 @@ link_file() {
   tick
 }
 
+# retire <target path>: if it is a link into the repo whose source is gone,
+# remove it and restore the newest backup of the original file, if any.
+retire() {
+  local dst="$1" name="${1##*/}" backup
+  [[ -L "$dst" && "$(readlink "$dst")" == "$REPO"/* && ! -e "$dst" ]] || return 0
+  run rm "$dst"
+  backup="$(ls -1d "$dst".backup-* 2>/dev/null | sort | tail -1 || true)"
+  if [[ -n "$backup" ]]; then
+    run mv "$backup" "$dst"
+    item "↺" "$C" "$name" "no longer synced · restored ${backup##*/}"
+  else
+    item "–" "$Y" "$name" "no longer synced · link removed"
+  fi
+}
+
 # link_dir <source folder in repo> <target folder>
 # Links each entry of the source folder into a real target folder. Entries the
 # tool or the user put there are left untouched.
@@ -181,6 +198,21 @@ managed_entries() {
     python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))))' "${src%/*}/manifest.json"
   else
     git -C "$REPO" ls-files -- "${src#"$REPO"/}" | sed "s|^${src#"$REPO"/}/||; s|/.*||" | sort -u
+  fi
+}
+
+# retire <target path>: if it is a link into the repo whose source is gone,
+# remove it and restore the newest backup of the original file, if any.
+retire() {
+  local dst="$1" name="${1##*/}" backup
+  [[ -L "$dst" && "$(readlink "$dst")" == "$REPO"/* && ! -e "$dst" ]] || return 0
+  run rm "$dst"
+  backup="$(ls -1d "$dst".backup-* 2>/dev/null | sort | tail -1 || true)"
+  if [[ -n "$backup" ]]; then
+    run mv "$backup" "$dst"
+    item "↺" "$C" "$name" "no longer synced · restored ${backup##*/}"
+  else
+    item "–" "$Y" "$name" "no longer synced · link removed"
   fi
 }
 
@@ -416,6 +448,8 @@ fi
 
 (( HAS_CLAUDE )) && install_tool claude "Claude Code" "$CLAUDE_DIR" "${CLAUDE_LINKS[@]}"
 (( HAS_CODEX )) && install_tool codex "Codex" "$CODEX_DIR" "${CODEX_LINKS[@]}"
+
+for retired in "${RETIRED[@]}"; do retire "$retired"; done
 
 say ""
 auto_update
