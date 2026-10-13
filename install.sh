@@ -95,7 +95,9 @@ if [[ -z "$SELF" || ! -f "$SELF" || ! -d "$(dirname "$SELF")/agents" ]]; then
     update_repo "$INSTALL_DIR"
   else
     item "⇣" "$C" "Cloning" "$(tilde "$INSTALL_DIR")"
-    git clone --quiet "$REPO_URL" "$INSTALL_DIR"
+    # Shallow: users need the files, not the history. Plain fast-forward
+    # pulls then fetch only new commits (pull --depth breaks fast-forwards).
+    git clone --quiet --depth 1 "$REPO_URL" "$INSTALL_DIR"
   fi
   exec bash "$INSTALL_DIR/install.sh" "${PASS[@]+"${PASS[@]}"}"
 elif (( UPDATE )); then
