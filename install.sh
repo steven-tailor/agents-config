@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build agents for each installed tool (Claude Code, Codex) from agents/ and
-# symlink them, plus shared skills and Codex configs, into the tool config dirs.
+# symlink them, plus shared skills and global instructions, into the tool config dirs.
 # Re-run after editing agents/ to regenerate.
 #
 # Never destroys anything the tools or the user created:
@@ -115,9 +115,13 @@ LINKED=0 RELINKED=0 BACKED_UP=0 UP_TO_DATE=0 WARNINGS=0
 # <repo path>:<name in tool config dir>[:entry to never carry over]. A trailing
 # / links every entry of the folder into a real folder instead of linking the
 # folder itself. skills/synced is Claude's and skills/.system is Codex's.
-CLAUDE_LINKS=("build/claude/agents/:agents" "skills/:skills:.system")
+CLAUDE_LINKS=(
+  "global/AGENTS.md:CLAUDE.md"
+  "build/claude/agents/:agents"
+  "skills/:skills:.system"
+)
 CODEX_LINKS=(
-  "Codex/AGENTS.md:AGENTS.md"
+  "global/AGENTS.md:AGENTS.md"
   "build/codex/agents/:agents"
   "Codex/keybindings.json:keybindings.json"
   "skills/:skills:synced"

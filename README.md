@@ -4,7 +4,7 @@ My personal collection of subagents, skills, and global instructions for [Claude
 
 Most skills here are written by other people. This repo only collects them; see [Credits](#credits).
 
-> `Codex/AGENTS.md` holds my own global rules for Codex. Installing replaces your `~/.codex/AGENTS.md` (the old file is backed up), so read it first or delete it from your clone.
+> `global/AGENTS.md` holds my own global rules. Installing replaces your `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` (old files are backed up), so read it first.
 
 ## Requirements
 

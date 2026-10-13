@@ -7,7 +7,8 @@ Personal collection of subagents, skills, and global instructions for Claude Cod
 ```
 agents/                  One file per subagent, the single source for both tools
 skills/                  Skills shared by Claude Code and Codex
-Codex/                   Codex-only global config (AGENTS.md, keybindings.json)
+global/AGENTS.md         Global instructions, installed as CLAUDE.md and AGENTS.md
+Codex/                   Codex-only config (keybindings.json)
 scripts/build_agents.py  Renders agents/ into build/claude and build/codex
 install.sh               Builds agents and creates the symlinks
 build/                   Generated, gitignored. Never edit or commit
@@ -21,7 +22,7 @@ build/                   Generated, gitignored. Never edit or commit
 | --- | --- | --- |
 | `build/<tool>/agents/*` | `agents/<entry>` | `agents/<entry>` |
 | `skills/*` | `skills/<entry>` | `skills/<entry>` |
-| `Codex/AGENTS.md` | — | `AGENTS.md` |
+| `global/AGENTS.md` | `CLAUDE.md` | `AGENTS.md` |
 | `Codex/keybindings.json` | — | `keybindings.json` |
 
 Rule: never destroy what the tools or the user created.
