@@ -47,7 +47,7 @@ Updates never delete what Claude Code, Codex or you created:
 
 Skills are copied from their authors. All credit goes to them:
 
-- Apache-2.0 skills, with the license kept in each folder: `figma`, `gh-address-comments`, `gh-fix-ci`, `linear`, `security-best-practices`, `security-ownership-map`, `sentry`, `yeet`
+- Apache-2.0 skills, with the license kept in each folder: `linear`, `security-best-practices`, `security-ownership-map`, `yeet`
 
 If you wrote a skill here and want a different credit or want it removed, open an issue.
 
