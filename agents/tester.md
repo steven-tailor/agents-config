@@ -6,10 +6,11 @@ effort = "high"
 [claude]
 tools = "Read, Grep, Glob, Bash"
 model = "inherit"
-permissionMode = "default"
+permissionMode = "auto"
 
 [codex]
 model = "gpt-5.6-terra"
+sandbox_mode = "workspace-write"
 +++
 Test changes like an owner.
 Identify affected behavior and run the smallest relevant existing tests first.

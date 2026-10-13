@@ -6,7 +6,7 @@ effort = "high"
 [claude]
 tools = "Read, Grep, Glob, Bash, Edit, Write"
 model = "inherit"
-permissionMode = "acceptEdits"
+permissionMode = "auto"
 
 [codex]
 model = "gpt-5.6-sol"
