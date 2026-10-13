@@ -6,7 +6,7 @@ effort = "high"
 [claude]
 tools = "Read, Grep, Glob, Bash"
 model = "inherit"
-permissionMode = "plan"
+permissionMode = "default"
 
 [codex]
 model = "gpt-5.6-terra"

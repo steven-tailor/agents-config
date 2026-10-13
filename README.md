@@ -8,7 +8,7 @@ Most skills here are written by other people. This repo only collects them; see 
 
 ## Requirements
 
-Install [mattpocock/skills](https://github.com/mattpocock/skills) first. Agents and skills here rely on them (for example, `implementer` and `ship` use `implement`). Follow the install instructions in that repo; setup differs per tool.
+Recommended: [mattpocock/skills](https://github.com/mattpocock/skills). Nothing here depends on them, but they work well alongside. Follow the install instructions in that repo; setup differs per tool.
 
 ## Install
 
@@ -47,7 +47,7 @@ Updates never delete what Claude Code, Codex or you created:
 
 Skills are copied from their authors. All credit goes to them:
 
-- Apache-2.0 skills, with the license kept in each folder: `linear`, `security-best-practices`, `security-ownership-map`, `yeet`
+- Apache-2.0 skills, with the license kept in each folder: `linear`, `security-best-practices`, `security-ownership-map`
 
 If you wrote a skill here and want a different credit or want it removed, open an issue.
 
