@@ -6,10 +6,28 @@
 # as <name>.backup-<timestamp> before linking.
 #
 # Usage: ./install.sh [--dry-run]
+#        curl -fsSL <raw install.sh URL> | bash [-s -- --dry-run]
 
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_URL="${AGENTS_CONFIG_REPO:-https://github.com/steven-tailor/agents-config.git}"
+INSTALL_DIR="${AGENTS_CONFIG_DIR:-$HOME/.agents-config}"
+
+# Piped from curl there is no repo next to the script: clone or update it into
+# INSTALL_DIR and re-run from there, since the symlinks point into the clone.
+SELF="${BASH_SOURCE[0]:-}"
+if [[ -z "$SELF" || ! -f "$SELF" || ! -d "$(dirname "$SELF")/agents" ]]; then
+  if [[ -d "$INSTALL_DIR/.git" ]]; then
+    echo "Updating $INSTALL_DIR"
+    git -C "$INSTALL_DIR" pull --ff-only --quiet
+  else
+    echo "Cloning $REPO_URL into $INSTALL_DIR"
+    git clone --quiet "$REPO_URL" "$INSTALL_DIR"
+  fi
+  exec bash "$INSTALL_DIR/install.sh" "$@"
+fi
+
+REPO="$(cd "$(dirname "$SELF")" && pwd)"
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
