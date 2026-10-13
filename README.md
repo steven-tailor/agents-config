@@ -100,6 +100,6 @@ If you wrote a skill here and want a different credit or want it removed, open a
 
 ## License
 
-My own work here (the install script, the generator, the agents and the docs) is released into the public domain under [the Unlicense](LICENSE). Use it however you like, no attribution needed.
+My own work here (the install script, the generator, the agents, the `ship` skill and the docs) is released into the public domain under [the Unlicense](LICENSE). Use it however you like, no attribution needed.
 
 Third-party skills keep their original licenses.
