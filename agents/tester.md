@@ -4,12 +4,12 @@ description = "Validate changed behavior, find regressions, and identify missing
 effort = "high"
 
 [claude]
-tools = "Read, Grep, Glob, Bash"
+tools = "Read, Grep, Glob, Bash, Skill"
 model = "inherit"
 permissionMode = "auto"
 
 [codex]
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 sandbox_mode = "workspace-write"
 +++
 Test changes like an owner.

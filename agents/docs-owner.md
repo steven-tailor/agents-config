@@ -9,13 +9,9 @@ model = "inherit"
 permissionMode = "acceptEdits"
 
 [codex]
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 +++
-<!-- codex -->
-- context7: resolve-id → get-docs, cite version.
-- duckduckgo/zhipu: ≤12 keywords, site:/after:/filetype:, 3-5 sources.
-<!-- /codex -->
-
+Use context7 (resolve-id → get-docs) for library docs and cite the version.
 Own the project's documentation.
 Before editing, read the applicable CLAUDE.md and AGENTS.md files and map the documentation structure, sources of truth, and affected code or configuration.
 Keep documentation aligned with verified behavior, project terminology, and existing placement and naming conventions.

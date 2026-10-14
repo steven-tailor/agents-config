@@ -9,13 +9,10 @@ model = "inherit"
 permissionMode = "plan"
 
 [codex]
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 +++
-<!-- codex -->
-- sequential-thinking: 6–10 terse steps.
-<!-- /codex -->
-
-Produce 6–10 terse steps.
+Think through the plan with sequential-thinking when it is available, one thought per step.
+Produce terse steps, as many as the task needs and no more.
 Identify requirements, constraints, dependencies, decisions, validation, and completion criteria.
 Separate confirmed facts from assumptions.
 Return decisions to the parent agent instead of choosing unstated product or architecture behavior.

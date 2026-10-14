@@ -7,7 +7,7 @@ description: Take a task end-to-end with sub-agents — design and plan, tests f
 
 You are the orchestrator. Sub-agents cannot spawn sub-agents, so you run every step yourself and pass context between them. Give each agent everything it needs in its prompt: it has not seen this conversation. The project's own instructions decide *how*; this skill only decides *in what order*.
 
-Agents: `solution-architect`, `planner`, `implementer`, `reviewer`, `tester`, `docs-owner` (fall back to `general-purpose` if one doesn't exist). Only you commit, push and open the PR; tell every agent not to.
+Agents: `solution-architect`, `planner`, `implementer`, `reviewer`, `tester`, `docs-owner` (fall back to `general-purpose` if one doesn't exist). In Codex their names use underscores: `solution_architect`, `docs_owner`. Only you commit, push and open the PR; tell every agent not to.
 
 ## 0. Learn the project
 
@@ -24,13 +24,9 @@ Take the task from the user's prompt, or fetch the ticket it references (e.g. `g
 
 ## 2. Design and plan
 
-Launch `solution-architect` with: the task, the acceptance criteria and the project rules from step 0. Ask it to:
+When the task touches architecture (a new module, dependency, data model, or public interface), launch `solution-architect` with: the task, the acceptance criteria and the project rules from step 0. It returns the approach, the files it touches, the risks, and open decisions. For any other task, skip it and say so in the report.
 
-1. Choose the approach within the project's existing stack and patterns, and name the alternatives it rejected and why.
-2. List the files and modules the change touches, and the risks (compatibility, data, security, platforms).
-3. Not create or edit any files; return the design in its report.
-
-Then launch `planner` with: the task, the acceptance criteria, the project rules and the architect's design. Ask for a bounded plan:
+Then launch `planner` with: the task, the acceptance criteria, the project rules and the architect's design, if there is one. Ask for a bounded plan:
 
 - the steps, each with the files it changes;
 - the test for each acceptance criterion;
@@ -70,10 +66,10 @@ Launch `tester` with: the acceptance criteria, how to run the changed code (step
 
 **User-facing UI:**
 
-1. Start the app in the background and wait until it responds.
-2. Write a throwaway Playwright script outside the repo that walks each acceptance criterion like a user: navigate, click, type, check what's on screen. Take a screenshot per criterion.
-3. Use the project's Playwright if it has one. If Playwright isn't available, report that as a blocker; don't install anything.
-4. Stop the app. Report pass/fail per criterion with screenshot paths, and the exact failure for each fail.
+1. Use the `webapp-testing` skill: it starts the app, waits until it responds, and stops it afterwards.
+2. Write a throwaway Python Playwright script outside the repo that walks each acceptance criterion like a user: navigate, click, type, check what's on screen. Take a screenshot per criterion.
+3. If Python Playwright isn't available, report that as a blocker; don't install anything.
+4. Report pass/fail per criterion with screenshot paths, and the exact failure for each fail.
 
 **No UI** (CLI, script, library, API, config):
 

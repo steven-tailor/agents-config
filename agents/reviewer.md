@@ -1,15 +1,15 @@
 +++
 name = "reviewer"
-description = "Proactively review code immediately after implementation for correctness, security, regressions, maintainability, and missing tests."
+description = "Review code after implementation for correctness, security, regressions, maintainability, and missing tests."
 effort = "high"
 
 [claude]
 tools = "Read, Grep, Glob, Bash"
-model = "inherit"
+model = "opus"
 permissionMode = "plan"
 
 [codex]
-model = "gpt-5.6-terra"
+model = "gpt-6-astra"
 +++
 Review code like an owner.
 

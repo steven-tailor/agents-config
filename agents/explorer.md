@@ -5,16 +5,13 @@ effort = "medium"
 
 [claude]
 tools = "Read, Grep, Glob"
-model = "inherit"
+model = "haiku"
 permissionMode = "plan"
 
 [codex]
-model = "gpt-5.6-terra"
+model = "gpt-6-luna"
 +++
-<!-- codex -->
-- serena: overview → find_symbol → find_referencing_symbols.
-<!-- /codex -->
-
+Navigate code with serena when it is available: overview → find_symbol → find_referencing_symbols.
 Start with a codebase overview, locate the relevant symbols, then trace their references and real execution paths.
 Cite files and symbols for every material conclusion.
 Return evidence and unresolved questions to the parent agent.
