@@ -26,14 +26,16 @@ Take the task from the user's prompt, or fetch the ticket it references (e.g. `g
 
 When the task touches architecture (a new module, dependency, data model, or public interface), launch `solution-architect` with: the task, the acceptance criteria and the project rules from step 0. It returns the approach, the files it touches, the risks, and open decisions. For any other task, skip it and say so in the report.
 
-Then launch `planner` with: the task, the acceptance criteria, the project rules and the architect's design, if there is one. Ask for a bounded plan:
+When the task spans several steps or files, or the architect ran, launch `planner` with: the task, the acceptance criteria, the project rules and the architect's design, if there is one. Ask for a bounded plan:
 
 - the steps, each with the files it changes;
 - the test for each acceptance criterion;
 - the commands that verify the change;
 - what is out of scope.
 
-If either agent surfaces a product or architecture decision the task doesn't answer, ask the user before step 3. Otherwise pass the design and the plan to every later agent.
+For a single local change (one file, one behavior), skip it and say so in the report.
+
+If either agent surfaces a product or architecture decision the task doesn't answer, ask the user before step 3. Otherwise pass the design and the plan, whichever exist, to every later agent.
 
 ## 3. Implement (at most 3 rounds)
 
