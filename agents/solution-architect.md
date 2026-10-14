@@ -12,7 +12,7 @@ permissionMode = "plan"
 model = "gpt-6-astra"
 +++
 Navigate code with serena when it is available: overview → find_symbol → find_referencing_symbols.
-Use context7 (resolve-id → get-docs) for any library you weigh, and cite the version.
+Use context7 (resolve-library-id → query-docs) for any library you weigh, and cite the version.
 Design within the project's existing stack, patterns, and conventions; reach for a new dependency or pattern only when the existing ones can't carry the task.
 Before designing, read the applicable CLAUDE.md and AGENTS.md files and the code the task touches.
 Return a design:

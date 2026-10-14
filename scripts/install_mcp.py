@@ -90,7 +90,12 @@ def main():
             run(*add_args(tool, name, spec))
             print(f"installed {name}")
         except (subprocess.CalledProcessError, OSError) as e:
-            print(f"failed {name}: {error(e)}")
+            # `codex mcp add` tries an OAuth login after adding an HTTP server and
+            # can time out on it; the server is added all the same.
+            if tool == "codex" and name in {s["name"] for s in json.loads(run("codex", "mcp", "list", "--json"))}:
+                print(f"installed {name}")
+            else:
+                print(f"failed {name}: {error(e)}")
 
 
 if __name__ == "__main__":
