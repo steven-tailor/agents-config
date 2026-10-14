@@ -41,6 +41,7 @@ Rule: never destroy what the tools or the user created.
 - `--update` pulls the clone the script lives in (same safety checks), then re-runs the new version.
 - Auto-update: every install registers a daily `install.sh --update` job, label `agents-config.update` (launchd plist in `~/Library/LaunchAgents` on macOS, tagged crontab line elsewhere), logging to `build/auto-update.log`. It captures the current `PATH`, `CLAUDE_CONFIG_DIR` and `CODEX_HOME`. Rewritten only when its content changes; `--no-auto-update` removes it.
 - `--dry-run` prints actions without changing tool config dirs; the build still runs. `--force` overwrites generated agents and external skills edited outside the repo.
+- `--help` / `-h` prints the `# Usage:` block of the `install.sh` header comment, up to its first blank line. Keep that block contiguous and give every new option a line in it. Piped from curl there is no file, so it prints a one-line fallback.
 
 ## Agents
 
