@@ -2,7 +2,7 @@
 
 My personal collection of subagents, skills, and global instructions for [Claude Code](https://claude.com/claude-code) and [Codex](https://github.com/openai/codex), kept in one place and symlinked into each tool.
 
-Most skills here are written by other people. This repo only collects them; see [Credits](#credits).
+Third-party skills are not copied here: `skills.toml` lists where they live, and the installer fetches them from their authors' repos. See [Credits](#credits).
 
 > `global/AGENTS.md` holds my own global rules. Installing replaces your `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` (old files are backed up), so read it first.
 
@@ -16,7 +16,7 @@ Recommended: [mattpocock/skills](https://github.com/mattpocock/skills). Nothing 
 curl -fsSL https://raw.githubusercontent.com/steven-tailor/agents-config/main/install.sh | bash
 ```
 
-Requires `git`, `bash`, and Python 3.11+. The script clones this repo into `~/.agents-config` (override with `AGENTS_CONFIG_DIR`) and links your configs into it, so keep that folder.
+Requires `git`, `bash`, and Python 3.11+. The script clones this repo into `~/.agents-config` (override with `AGENTS_CONFIG_DIR`), fetches the skills listed in `skills.toml`, and links your configs into it, so keep that folder.
 
 Preview the changes first. The repo is still cloned, but your configs stay untouched:
 
@@ -45,14 +45,15 @@ Updates never delete what Claude Code, Codex or you created:
 
 ## Credits
 
-Skills are copied from their authors. All credit goes to them:
+Third-party skills are fetched from their authors' repos at install time (see `skills.toml`). All credit goes to them:
 
-- Apache-2.0 skills, with the license kept in each folder: `linear`, `security-best-practices`, `security-ownership-map`
+- [openai/skills](https://github.com/openai/skills) (Apache-2.0): `linear`, `security-best-practices`, `security-ownership-map`
+- [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) (MIT): `i-have-adhd`, installed with `disable-model-invocation` turned off
 
 If you wrote a skill here and want a different credit or want it removed, open an issue.
 
 ## License
 
-My own work here (the install script, the generator, the agents, the `ship` skill and the docs) is released into the public domain under [the Unlicense](LICENSE). Use it however you like, no attribution needed.
+My own work here (the install script, the scripts, the agents, the `ship` skill and the docs) is released into the public domain under [the Unlicense](LICENSE). Use it however you like, no attribution needed.
 
 Third-party skills keep their original licenses.

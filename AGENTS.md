@@ -6,34 +6,37 @@ Personal collection of subagents, skills, and global instructions for Claude Cod
 
 ```
 agents/                  One file per subagent, the single source for both tools
-skills/                  Skills shared by Claude Code and Codex
+skills/                  Own skills shared by Claude Code and Codex
+skills.toml              Third-party skills: source repo, path, frontmatter overrides
 global/AGENTS.md         Global instructions, installed as CLAUDE.md and AGENTS.md
 scripts/build_agents.py  Renders agents/ into build/claude and build/codex
-install.sh               Builds agents and creates the symlinks
+scripts/fetch_skills.py  Fetches skills.toml entries into build/external/skills
+install.sh               Fetches skills, builds agents and creates the symlinks
 build/                   Generated, gitignored. Never edit or commit
 ```
 
 ## Install mechanics
 
-`install.sh` sets up only the tools it detects (config dir or CLI on `PATH`). For each it runs the generator, then links:
+`install.sh` sets up only the tools it detects (config dir or CLI on `PATH`). It fetches external skills once, then for each tool runs the generator and links:
 
 | Repo path | `~/.claude` (`CLAUDE_CONFIG_DIR`) | `~/.codex` (`CODEX_HOME`) |
 | --- | --- | --- |
 | `build/<tool>/agents/*` | `agents/<entry>` | `agents/<entry>` |
 | `skills/*` | `skills/<entry>` | `skills/<entry>` |
+| `build/external/skills/*` | `skills/<entry>` | `skills/<entry>` |
 | `global/AGENTS.md` | `CLAUDE.md` | `AGENTS.md` |
 
 Rule: never destroy what the tools or the user created.
 
 - `agents/` and `skills/` in tool dirs are real folders with one symlink per managed entry. Anything else in them stays untouched.
-- Managed entries are git-tracked files (skills) or names in `build/<tool>/manifest.json` (agents). Never derive them from folder contents: tools may have written into the clone.
+- Managed entries are git-tracked files (skills), names in `build/<tool>/manifest.json` (agents) or in `build/external/manifest.json` (external skills). Never derive them from folder contents: tools may have written into the clone.
 - Real files and folders in the way are renamed to `<name>.backup-<timestamp>`, never deleted.
 - Links into the repo whose source is gone are removed.
 - Older installs linked whole folders. They are converted to real folders and unmanaged entries are copied over; `skills/synced` (Claude) and `skills/.system` (Codex) go only to their own tool.
 - Piped from curl, it clones or updates `AGENTS_CONFIG_REPO` into `AGENTS_CONFIG_DIR` (default `~/.agents-config`) and re-runs from there. The clone is shallow (`--depth 1`) and stays that way: updates fetch only the latest commit, `checkout -B` onto it (refuses to overwrite untracked files) and gc the rest. Full clones (development checkouts) get plain `pull --ff-only` and keep history. Updates are skipped on local changes, local commits or a detached HEAD.
 - `--update` pulls the clone the script lives in (same safety checks), then re-runs the new version.
 - Auto-update: every install registers a daily `install.sh --update` job, label `agents-config.update` (launchd plist in `~/Library/LaunchAgents` on macOS, tagged crontab line elsewhere), logging to `build/auto-update.log`. It captures the current `PATH`, `CLAUDE_CONFIG_DIR` and `CODEX_HOME`. Rewritten only when its content changes; `--no-auto-update` removes it.
-- `--dry-run` prints actions without changing tool config dirs; the build still runs. `--force` overwrites generated agents edited outside the repo.
+- `--dry-run` prints actions without changing tool config dirs; the build still runs. `--force` overwrites generated agents and external skills edited outside the repo.
 
 ## Agents
 
@@ -73,4 +76,7 @@ Validate after editing: `python3 scripts/build_agents.py`.
 - `skills/` is flat: one folder per skill.
 - Do not add default skills that ship with Claude Code or Codex. `skills/synced/` and `skills/.system/` are app-managed and gitignored.
 - Do not vendor [mattpocock/skills](https://github.com/mattpocock/skills). It is an external requirement users install themselves (see README `Requirements`); agents may depend on it.
-- When adding a third-party skill, keep its license file and credit the source in the README `Credits` section.
+- Never copy third-party skills into `skills/`. Add them to `skills.toml` and credit the source in the README `Credits` section. A name must not exist in both.
+- `fetch_skills.py` keeps one shallow, sparse clone per repo in `build/external/sources/`, resets it to the latest commit of the branch (default branch unless `ref` is set) on every run, and copies each skill folder into `build/external/skills/`. A `[<name>.frontmatter]` table replaces or adds keys in the copied `SKILL.md`.
+- External skills are hashed in `build/external/manifest.json`. One changed outside the script is kept and printed as `kept <name>`; `--force` overwrites it. A failed fetch keeps the previous copy and prints `failed <name>: <reason>`. Skills dropped from `skills.toml` are removed only if unchanged.
+- Validate after editing: `python3 scripts/fetch_skills.py`.

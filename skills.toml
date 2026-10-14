@@ -1,0 +1,30 @@
+# External skills. install.sh fetches each one from its repo into
+# build/external/skills/<name> and links it next to skills/.
+#
+# [<name>]                    folder name in the tool's skills/
+# repo = "<git URL>"
+# path = "<folder in repo>"   the folder holding SKILL.md
+# ref = "<branch or tag>"     optional, default: the repo's default branch
+#
+# [<name>.frontmatter]        optional overrides for SKILL.md frontmatter:
+# <key> = <value>             each key replaces that line or is added
+
+[i-have-adhd]
+repo = "https://github.com/ayghri/i-have-adhd"
+path = "skills/i-have-adhd"
+
+# global/AGENTS.md has the model load it in every conversation.
+[i-have-adhd.frontmatter]
+disable-model-invocation = false
+
+[linear]
+repo = "https://github.com/openai/skills"
+path = "skills/.curated/linear"
+
+[security-best-practices]
+repo = "https://github.com/openai/skills"
+path = "skills/.curated/security-best-practices"
+
+[security-ownership-map]
+repo = "https://github.com/openai/skills"
+path = "skills/.curated/security-ownership-map"

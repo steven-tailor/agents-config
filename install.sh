@@ -12,7 +12,7 @@
 #
 # Usage: ./install.sh [--dry-run] [--force] [--update] [--no-auto-update]
 #        curl -fsSL <raw install.sh URL> | bash [-s -- <options>]
-# --force           overwrite generated agents changed outside the repo
+# --force           overwrite generated agents and external skills changed outside the repo
 # --update          pull the latest version of the clone before installing
 # --no-auto-update  remove the daily `install.sh --update` job (installed by default)
 
@@ -155,15 +155,18 @@ LINKED=0 RELINKED=0 BACKED_UP=0 UP_TO_DATE=0 WARNINGS=0
 # <repo path>:<name in tool config dir>[:entry to never carry over]. A trailing
 # / links every entry of the folder into a real folder instead of linking the
 # folder itself. skills/synced is Claude's and skills/.system is Codex's.
+# build/external/skills holds the skills listed in skills.toml.
 CLAUDE_LINKS=(
   "global/AGENTS.md:CLAUDE.md"
   "build/claude/agents/:agents"
   "skills/:skills:.system"
+  "build/external/skills/:skills"
 )
 CODEX_LINKS=(
   "global/AGENTS.md:AGENTS.md"
   "build/codex/agents/:agents"
   "skills/:skills:synced"
+  "build/external/skills/:skills"
 )
 
 run() { (( DRY_RUN )) || "$@"; }
@@ -227,7 +230,8 @@ managed_entries() {
 # Links each entry of the source folder into a real target folder. Entries the
 # tool or the user put there are left untouched.
 link_dir() {
-  local src="$REPO/${1%/}" dst="$2" skip="${3:-}" name="${2##*/}" entry base old
+  local src="$REPO/${1%/}" dst="$2" skip="${3:-}" name="${2##*/}/" entry base old
+  [[ "$1" == build/external/* ]] && name="external $name"
   local new=0 copied=0 backups=0 removed=0 own=0 total=0
   local managed=()
 
@@ -278,7 +282,7 @@ link_dir() {
     if [[ -L "$entry" && "$(readlink "$entry")" == "$REPO"/* && ! -e "$entry" ]]; then
       run rm "$entry"
       removed=$(( removed + 1 ))
-    elif [[ "$base" != .DS_Store ]]; then
+    elif [[ "$base" != .DS_Store && ! ( -L "$entry" && "$(readlink "$entry")" == "$REPO"/* ) ]]; then
       own=$(( own + 1 ))
     fi
   done
@@ -289,7 +293,7 @@ link_dir() {
   (( removed )) && detail+=" · $removed removed"
   (( copied )) && detail+=" · $copied carried over"
   (( own )) && detail+=" · $own yours untouched"
-  item "✓" "$G" "$name/" "$detail"
+  item "✓" "$G" "$name" "$detail"
   tick
 }
 
@@ -393,6 +397,28 @@ auto_update() {
   fi
 }
 
+# Fetch the skills listed in skills.toml into build/external/skills, shared by
+# both tools. A failed fetch keeps the previous copy.
+fetch_skills() {
+  local line count=0 total=0
+  say ""
+  while IFS= read -r line; do
+    case "$line" in
+      kept\ *)
+        item "⚠" "$Y" "${line#kept }" "edited outside repo · kept (--force to overwrite)"
+        WARNINGS=$(( WARNINGS + 1 )) ;;
+      failed\ *)
+        line="${line#failed }"
+        item "⚠" "$Y" "${line%%: *}" "fetch failed · ${line#*: }"
+        WARNINGS=$(( WARNINGS + 1 )) ;;
+      */*\ external\ skills\ *)
+        count="${line%%/*}" total="${line#*/}" total="${total%% *}" ;;
+    esac
+  done < <(python3 "$REPO/scripts/fetch_skills.py" "${FORCE[@]+"${FORCE[@]}"}")
+  item "⇣" "$G" "fetch skills" "$count/$total from skills.toml"
+  tick
+}
+
 # A tool counts as installed when its config dir or CLI exists.
 found() { [[ -d "$2" ]] || command -v "$1" >/dev/null; }
 
@@ -445,7 +471,7 @@ else
   item "○" "$D" "Codex" "not found · skip"
 fi
 
-TOTAL=$(( TOTAL + 1 ))  # auto-update step
+TOTAL=$(( TOTAL + 2 ))  # fetch skills and auto-update steps
 
 if (( TOTAL == 1 )); then
   say ""
@@ -453,6 +479,7 @@ if (( TOTAL == 1 )); then
   exit 1
 fi
 
+fetch_skills
 (( HAS_CLAUDE )) && install_tool claude "Claude Code" "$CLAUDE_DIR" "${CLAUDE_LINKS[@]}"
 (( HAS_CODEX )) && install_tool codex "Codex" "$CODEX_DIR" "${CODEX_LINKS[@]}"
 
