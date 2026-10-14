@@ -11,11 +11,12 @@
 # - generated agents changed outside the repo are kept, not overwritten;
 # - updates are skipped when the clone has local changes.
 #
-# Usage: ./install.sh [--dry-run] [--force] [--update] [--no-auto-update]
+# Usage: ./install.sh [--dry-run] [--force] [--update] [--no-auto-update] [--help]
 #        curl -fsSL <raw install.sh URL> | bash [-s -- <options>]
 # --force           overwrite generated agents and external skills changed outside the repo
 # --update          pull the latest version of the clone before installing
 # --no-auto-update  remove the daily `install.sh --update` job (installed by default)
+# --help, -h        show this usage
 
 set -euo pipefail
 
@@ -63,8 +64,18 @@ DRY_RUN=0 UPDATE=0 AUTO_UPDATE=1
 FORCE=()
 PASS=()  # options for the re-run after an update
 
+# Print the Usage block of the header. Piped from curl there is no file to read.
+usage() {
+  if [[ -f "${BASH_SOURCE[0]:-}" ]]; then
+    sed -n '/^# Usage:/,/^$/{s/^# \{0,1\}//;/./p}' "${BASH_SOURCE[0]}"
+  else
+    echo "Usage: see the header of install.sh" >&2
+  fi
+}
+
 for arg in "$@"; do
   case "$arg" in
+    -h|--help) usage; exit 0 ;;
     --dry-run) DRY_RUN=1 ;;
     --force) FORCE=(--force) ;;
     --update) UPDATE=1; continue ;;
