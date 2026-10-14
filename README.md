@@ -10,6 +10,8 @@ Third-party skills are not copied here: `skills.toml` lists where they live, and
 
 The installer also sets up [mattpocock/skills](https://github.com/mattpocock/skills) unless you already have them: the Claude Code plugin, and for Codex the skills via [skills.sh](https://skills.sh) (needs `npx`). Nothing here depends on them, but they work well alongside. The plugin updates itself; update the Codex copies with `npx skills update -g`.
 
+It also adds the MCP servers the agents use (`mcp.toml`) to both tools: Serena (needs [uv](https://docs.astral.sh/uv/)), Context7 (remote) and sequential-thinking (needs `npx`).
+
 ## Install
 
 ```bash
@@ -49,6 +51,8 @@ Third-party skills are fetched from their authors' repos at install time (see `s
 
 - [openai/skills](https://github.com/openai/skills) (Apache-2.0): `linear`, `security-best-practices`, `security-ownership-map`
 - [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) (MIT): `i-have-adhd`, installed with `disable-model-invocation` turned off
+- [anthropics/skills](https://github.com/anthropics/skills) (Apache-2.0): `webapp-testing`, `frontend-design`
+- [obra/superpowers](https://github.com/obra/superpowers) (MIT): `verification-before-completion`
 
 If you wrote a skill here and want a different credit or want it removed, open an issue.
 

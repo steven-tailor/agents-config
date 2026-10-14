@@ -1,0 +1,25 @@
+# MCP servers install.sh adds to Claude Code (user scope) and Codex; the agents
+# in agents/ use them. Nothing is reinstalled or updated: a server is skipped
+# when the tool already has one with the same name, however it was added.
+#
+# [<name>]
+# command = ["<cmd>", "<arg>", ...]  stdio server, or:
+# <tool>_command = [...]             the same, for one tool only (claude or codex)
+# url = "<url>"                      streamable HTTP server
+# requires = ["<cli>", ...]          optional: skipped when one is missing from PATH
+# warm = ["<cmd>", ...]              optional: run once before adding, so the first
+#                                    start fits the tool's startup timeout
+
+[serena]
+claude_command = ["uvx", "-p", "3.13", "--from", "serena-agent", "serena", "start-mcp-server", "--project-from-cwd", "--context=claude-code"]
+codex_command = ["uvx", "-p", "3.13", "--from", "serena-agent", "serena", "start-mcp-server", "--project-from-cwd", "--context=codex"]
+requires = ["uvx"]
+warm = ["uvx", "-p", "3.13", "--from", "serena-agent", "serena", "--help"]
+
+[context7]
+# Works without a key, with lower rate limits.
+url = "https://mcp.context7.com/mcp"
+
+[sequential-thinking]
+command = ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
+requires = ["npx"]

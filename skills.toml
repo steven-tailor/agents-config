@@ -28,3 +28,15 @@ path = "skills/.curated/security-best-practices"
 [security-ownership-map]
 repo = "https://github.com/openai/skills"
 path = "skills/.curated/security-ownership-map"
+
+[webapp-testing]
+repo = "https://github.com/anthropics/skills"
+path = "skills/webapp-testing"
+
+[frontend-design]
+repo = "https://github.com/anthropics/skills"
+path = "skills/frontend-design"
+
+[verification-before-completion]
+repo = "https://github.com/obra/superpowers"
+path = "skills/verification-before-completion"

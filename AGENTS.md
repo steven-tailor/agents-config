@@ -9,11 +9,13 @@ agents/                  One file per subagent, the single source for both tools
 skills/                  Own skills shared by Claude Code and Codex
 skills.toml              Third-party skills: source repo, path, frontmatter overrides
 plugins.toml             Plugins to install per tool (plugin CLI or skills.sh)
+mcp.toml                 MCP servers to add to each tool, used by the agents
 global/AGENTS.md         Global instructions, installed as CLAUDE.md and AGENTS.md
 scripts/build_agents.py  Renders agents/ into build/claude and build/codex
 scripts/fetch_skills.py  Fetches skills.toml entries into build/external/skills
 scripts/install_plugins.py  Installs plugins.toml entries into one tool
-install.sh               Fetches skills, builds agents, creates the symlinks, installs plugins
+scripts/install_mcp.py   Adds mcp.toml servers to one tool
+install.sh               Fetches skills, builds agents, creates the symlinks, installs plugins and MCP servers
 build/                   Generated, gitignored. Never edit or commit
 ```
 
@@ -84,6 +86,8 @@ Validate after editing: `python3 scripts/build_agents.py`.
 - `plugins.toml` lists, per entry, a plugin id (`<tool>`, optional `<tool>_marketplace` added first if missing) or a skills.sh source (`<tool>_skills_sh`, installs every skill globally with `npx skills add <source> -g`).
 - Never reinstall or update: an entry is skipped when the tool lists the plugin as installed or a marker skill from `skills` exists in the tool's skills dirs (Codex: `$CODEX_HOME/skills` and `~/.agents/skills`). Plugins update themselves.
 - `install_plugins.py` prints `installed`, `present`, `skipped` or `failed <name>: <reason>`; a missing CLI or `npx` skips, a failure warns and never stops the install. `--dry-run` installs nothing.
+- `mcp.toml` lists the MCP servers the agents name. `install_mcp.py` adds each with `<tool> mcp add` (Claude: user scope) unless the tool already has that name, skips one whose `requires` CLI is missing, and prints the same lines. An agent that names a server needs its entry here.
+- Keep both tools equal: agent instructions are shared, `<!-- claude -->`/`<!-- codex -->` blocks only for what the other tool lacks, and every skill and MCP server installs into both.
 - Never copy third-party skills into `skills/`. Add them to `skills.toml` and credit the source in the README `Credits` section. A name must not exist in both.
 - `fetch_skills.py` keeps one shallow, sparse clone per repo in `build/external/sources/`, resets it to the latest commit of the branch (default branch unless `ref` is set) on every run, and copies each skill folder into `build/external/skills/`. A `[<name>.frontmatter]` table replaces or adds keys in the copied `SKILL.md`.
 - External skills are hashed in `build/external/manifest.json`. One changed outside the script is kept and printed as `kept <name>`; `--force` overwrites it. A failed fetch keeps the previous copy and prints `failed <name>: <reason>`. Skills dropped from `skills.toml` are removed only if unchanged.

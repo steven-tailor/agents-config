@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Build agents for each installed tool (Claude Code, Codex) from agents/ and
 # symlink them, plus shared skills and global instructions, into the tool config
-# dirs. Fetches the skills in skills.toml and installs the plugins in plugins.toml.
+# dirs. Fetches the skills in skills.toml, installs the plugins in plugins.toml
+# and adds the MCP servers in mcp.toml.
 # Re-run after editing agents/ to regenerate.
 #
 # Never destroys anything the tools or the user created:
@@ -445,6 +446,26 @@ install_plugins() {
   tick
 }
 
+# install_mcp <tool>: add the MCP servers in mcp.toml, unless already there.
+install_mcp() {
+  local tool="$1" line name dry=()
+  (( DRY_RUN )) && dry=(--dry-run)
+  while IFS= read -r line; do
+    name="${line#* }" name="${name%%:*}"
+    case "$line" in
+      installed\ *)
+        if (( DRY_RUN )); then item "+" "$G" "$name" "MCP · would add"
+        else item "+" "$G" "$name" "MCP · added"; fi ;;
+      present\ *) item "✓" "$G" "$name" "MCP · present" ;;
+      skipped\ *) item "○" "$D" "$name" "MCP · ${line#*: }" ;;
+      failed\ *)
+        item "⚠" "$Y" "$name" "MCP · ${line#*: }"
+        WARNINGS=$(( WARNINGS + 1 )) ;;
+    esac
+  done < <(python3 "$REPO/scripts/install_mcp.py" --tool "$tool" "${dry[@]+"${dry[@]}"}")
+  tick
+}
+
 # A tool counts as installed when its config dir or CLI exists.
 found() { [[ -d "$2" ]] || command -v "$1" >/dev/null; }
 
@@ -485,13 +506,13 @@ say ""
 
 HAS_CLAUDE=0 HAS_CODEX=0
 if found claude "$CLAUDE_DIR"; then
-  HAS_CLAUDE=1 TOTAL=$(( TOTAL + 2 + ${#CLAUDE_LINKS[@]} ))
+  HAS_CLAUDE=1 TOTAL=$(( TOTAL + 3 + ${#CLAUDE_LINKS[@]} ))
   item "●" "$G" "Claude Code" "found"
 else
   item "○" "$D" "Claude Code" "not found · skip"
 fi
 if found codex "$CODEX_DIR"; then
-  HAS_CODEX=1 TOTAL=$(( TOTAL + 2 + ${#CODEX_LINKS[@]} ))
+  HAS_CODEX=1 TOTAL=$(( TOTAL + 3 + ${#CODEX_LINKS[@]} ))
   item "●" "$G" "Codex" "found"
 else
   item "○" "$D" "Codex" "not found · skip"
@@ -509,11 +530,13 @@ fetch_skills
 if (( HAS_CLAUDE )); then
   install_tool claude "Claude Code" "$CLAUDE_DIR" "${CLAUDE_LINKS[@]}"
   install_plugins claude "$CLAUDE_DIR/skills"
+  install_mcp claude
 fi
 if (( HAS_CODEX )); then
   install_tool codex "Codex" "$CODEX_DIR" "${CODEX_LINKS[@]}"
   # skills.sh installs into ~/.agents/skills, which Codex also reads.
   install_plugins codex "$CODEX_DIR/skills" "$HOME/.agents/skills"
+  install_mcp codex
 fi
 
 say ""
