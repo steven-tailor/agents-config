@@ -8,16 +8,18 @@ Personal collection of subagents, skills, and global instructions for Claude Cod
 agents/                  One file per subagent, the single source for both tools
 skills/                  Own skills shared by Claude Code and Codex
 skills.toml              Third-party skills: source repo, path, frontmatter overrides
+plugins.toml             Plugins to install per tool (plugin CLI or skills.sh)
 global/AGENTS.md         Global instructions, installed as CLAUDE.md and AGENTS.md
 scripts/build_agents.py  Renders agents/ into build/claude and build/codex
 scripts/fetch_skills.py  Fetches skills.toml entries into build/external/skills
-install.sh               Fetches skills, builds agents and creates the symlinks
+scripts/install_plugins.py  Installs plugins.toml entries into one tool
+install.sh               Fetches skills, builds agents, creates the symlinks, installs plugins
 build/                   Generated, gitignored. Never edit or commit
 ```
 
 ## Install mechanics
 
-`install.sh` sets up only the tools it detects (config dir or CLI on `PATH`). It fetches external skills once, then for each tool runs the generator and links:
+`install.sh` sets up only the tools it detects (config dir or CLI on `PATH`). It fetches external skills once, then for each tool runs the generator, links, and installs plugins:
 
 | Repo path | `~/.claude` (`CLAUDE_CONFIG_DIR`) | `~/.codex` (`CODEX_HOME`) |
 | --- | --- | --- |
@@ -75,7 +77,13 @@ Validate after editing: `python3 scripts/build_agents.py`.
 
 - `skills/` is flat: one folder per skill.
 - Do not add default skills that ship with Claude Code or Codex. `skills/synced/` and `skills/.system/` are app-managed and gitignored.
-- Do not vendor [mattpocock/skills](https://github.com/mattpocock/skills). It is an external requirement users install themselves (see README `Requirements`); agents may depend on it.
+- Do not vendor [mattpocock/skills](https://github.com/mattpocock/skills). `plugins.toml` installs it: the Claude Code plugin, and skills.sh for Codex (Codex doesn't read its `.claude-plugin` marketplace yet). Agents may depend on it.
+
+## Plugins
+
+- `plugins.toml` lists, per entry, a plugin id (`<tool>`, optional `<tool>_marketplace` added first if missing) or a skills.sh source (`<tool>_skills_sh`, installs every skill globally with `npx skills add <source> -g`).
+- Never reinstall or update: an entry is skipped when the tool lists the plugin as installed or a marker skill from `skills` exists in the tool's skills dirs (Codex: `$CODEX_HOME/skills` and `~/.agents/skills`). Plugins update themselves.
+- `install_plugins.py` prints `installed`, `present`, `skipped` or `failed <name>: <reason>`; a missing CLI or `npx` skips, a failure warns and never stops the install. `--dry-run` installs nothing.
 - Never copy third-party skills into `skills/`. Add them to `skills.toml` and credit the source in the README `Credits` section. A name must not exist in both.
 - `fetch_skills.py` keeps one shallow, sparse clone per repo in `build/external/sources/`, resets it to the latest commit of the branch (default branch unless `ref` is set) on every run, and copies each skill folder into `build/external/skills/`. A `[<name>.frontmatter]` table replaces or adds keys in the copied `SKILL.md`.
 - External skills are hashed in `build/external/manifest.json`. One changed outside the script is kept and printed as `kept <name>`; `--force` overwrites it. A failed fetch keeps the previous copy and prints `failed <name>: <reason>`. Skills dropped from `skills.toml` are removed only if unchanged.

@@ -8,7 +8,7 @@ Third-party skills are not copied here: `skills.toml` lists where they live, and
 
 ## Requirements
 
-Recommended: [mattpocock/skills](https://github.com/mattpocock/skills). Nothing here depends on them, but they work well alongside. Follow the install instructions in that repo; setup differs per tool.
+The installer also sets up [mattpocock/skills](https://github.com/mattpocock/skills) unless you already have them: the Claude Code plugin, and for Codex the skills via [skills.sh](https://skills.sh) (needs `npx`). Nothing here depends on them, but they work well alongside. The plugin updates itself; update the Codex copies with `npx skills update -g`.
 
 ## Install
 

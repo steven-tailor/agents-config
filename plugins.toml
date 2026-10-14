@@ -1,0 +1,21 @@
+# Plugins install.sh installs into each tool: as a plugin through the tool's
+# CLI, or as skills through skills.sh (needs npx). Nothing is reinstalled: a
+# tool is skipped when the plugin is already installed, or when one of `skills`
+# already sits in its skills dir (installed another way, e.g. skills.sh into
+# ~/.agents/skills). Plugins update themselves; skills.sh copies don't.
+#
+# [<name>]
+# claude = "<plugin>@<marketplace>"    optional: `claude plugin install` id
+# claude_marketplace = "<source>"      optional: added first if missing
+# codex = "<plugin>@<marketplace>"     optional: `codex plugin add` id
+# codex_marketplace = "<source>"       optional: added first if missing
+# <tool>_skills_sh = "<source>"        optional, instead of <tool>: install every
+#                                      skill with `npx skills add <source> -g`
+# skills = ["<skill>", ...]            optional: marker skills of other installs
+
+[mattpocock-skills]
+claude = "mattpocock-skills@claude-plugins-official"
+claude_marketplace = "anthropics/claude-plugins-official"
+# Codex doesn't read this repo's .claude-plugin marketplace yet.
+codex_skills_sh = "mattpocock/skills"
+skills = ["setup-matt-pocock-skills"]

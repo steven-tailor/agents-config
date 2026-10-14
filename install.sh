@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build agents for each installed tool (Claude Code, Codex) from agents/ and
-# symlink them, plus shared skills and global instructions, into the tool config dirs.
+# symlink them, plus shared skills and global instructions, into the tool config
+# dirs. Fetches the skills in skills.toml and installs the plugins in plugins.toml.
 # Re-run after editing agents/ to regenerate.
 #
 # Never destroys anything the tools or the user created:
@@ -419,6 +420,31 @@ fetch_skills() {
   tick
 }
 
+# install_plugins <tool> <skills dirs...>: install the plugins in plugins.toml
+# through the tool's CLI, unless already installed in any way.
+install_plugins() {
+  local tool="$1" line name args=() dry=()
+  shift
+  for line in "$@"; do args+=(--skills-dir "$line"); done
+  (( DRY_RUN )) && dry=(--dry-run)
+  while IFS= read -r line; do
+    name="${line#* }" name="${name%%:*}"
+    case "$line" in
+      installed\ *)
+        if (( DRY_RUN )); then item "+" "$G" "$name" "plugin · would install"
+        else item "+" "$G" "$name" "plugin · installed"; fi ;;
+      present\ *:*) item "✓" "$G" "$name" "${line#*: }" ;;
+      present\ *) item "✓" "$G" "$name" "plugin · installed" ;;
+      skipped\ *) item "○" "$D" "$name" "plugin · ${line#*: }" ;;
+      failed\ *)
+        item "⚠" "$Y" "$name" "plugin · ${line#*: }"
+        WARNINGS=$(( WARNINGS + 1 )) ;;
+    esac
+  done < <(python3 "$REPO/scripts/install_plugins.py" --tool "$tool" \
+    "${args[@]+"${args[@]}"}" "${dry[@]+"${dry[@]}"}")
+  tick
+}
+
 # A tool counts as installed when its config dir or CLI exists.
 found() { [[ -d "$2" ]] || command -v "$1" >/dev/null; }
 
@@ -459,13 +485,13 @@ say ""
 
 HAS_CLAUDE=0 HAS_CODEX=0
 if found claude "$CLAUDE_DIR"; then
-  HAS_CLAUDE=1 TOTAL=$(( TOTAL + 1 + ${#CLAUDE_LINKS[@]} ))
+  HAS_CLAUDE=1 TOTAL=$(( TOTAL + 2 + ${#CLAUDE_LINKS[@]} ))
   item "●" "$G" "Claude Code" "found"
 else
   item "○" "$D" "Claude Code" "not found · skip"
 fi
 if found codex "$CODEX_DIR"; then
-  HAS_CODEX=1 TOTAL=$(( TOTAL + 1 + ${#CODEX_LINKS[@]} ))
+  HAS_CODEX=1 TOTAL=$(( TOTAL + 2 + ${#CODEX_LINKS[@]} ))
   item "●" "$G" "Codex" "found"
 else
   item "○" "$D" "Codex" "not found · skip"
@@ -480,8 +506,15 @@ if (( TOTAL == 1 )); then
 fi
 
 fetch_skills
-(( HAS_CLAUDE )) && install_tool claude "Claude Code" "$CLAUDE_DIR" "${CLAUDE_LINKS[@]}"
-(( HAS_CODEX )) && install_tool codex "Codex" "$CODEX_DIR" "${CODEX_LINKS[@]}"
+if (( HAS_CLAUDE )); then
+  install_tool claude "Claude Code" "$CLAUDE_DIR" "${CLAUDE_LINKS[@]}"
+  install_plugins claude "$CLAUDE_DIR/skills"
+fi
+if (( HAS_CODEX )); then
+  install_tool codex "Codex" "$CODEX_DIR" "${CODEX_LINKS[@]}"
+  # skills.sh installs into ~/.agents/skills, which Codex also reads.
+  install_plugins codex "$CODEX_DIR/skills" "$HOME/.agents/skills"
+fi
 
 say ""
 auto_update
