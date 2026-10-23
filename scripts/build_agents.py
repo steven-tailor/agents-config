@@ -24,8 +24,8 @@ Source format (agents/<name>.md):
     Only in the Codex version.
     <!-- /codex -->
 
-Codex defaults: `name` uses underscores instead of hyphens; `sandbox_mode` is
-`workspace-write` when Claude tools include an editing tool, else `read-only`.
+Codex `name` uses underscores instead of hyphens. Codex ignores `sandbox_mode`
+in agent files (agents inherit the parent session's sandbox), so none is set.
 
 Generated files are tracked by hash in build/<target>/manifest.json. A file
 changed outside the generator (e.g. edited by the tool through its symlink) is
@@ -46,7 +46,6 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 SOURCE_DIR = REPO / "agents"
 TARGETS = ("claude", "codex")
-EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 BLOCK = re.compile(r"^<!-- (/?)(claude|codex) -->[ \t]*\n?", re.MULTILINE)
 
 
@@ -123,18 +122,16 @@ def toml_value(value):
 
 
 def render_codex(meta, body):
-    tools = {t.strip() for t in str(meta.get("claude", {}).get("tools", "")).split(",")}
     fields = {
         "name": meta["name"].replace("-", "_"),
         "description": meta["description"],
     }
     if "effort" in meta:
         fields["model_reasoning_effort"] = meta["effort"]
-    fields["sandbox_mode"] = "workspace-write" if tools & EDIT_TOOLS else "read-only"
     fields.update(meta.get("codex", {}))
 
     # Keep the conventional key order: identity, model, then the rest.
-    order = ["name", "description", "model", "model_reasoning_effort", "sandbox_mode"]
+    order = ["name", "description", "model", "model_reasoning_effort"]
     keys = [k for k in order if k in fields] + [k for k in fields if k not in order]
     lines = [f"{key} = {toml_value(fields[key])}" for key in keys]
 

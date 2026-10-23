@@ -10,7 +10,6 @@ permissionMode = "auto"
 
 [codex]
 model = "gpt-6.1-sol"
-sandbox_mode = "workspace-write"
 +++
 Test changes like an owner.
 Identify affected behavior and run the smallest relevant existing tests first.

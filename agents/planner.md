@@ -4,7 +4,7 @@ description = "Structure an approved idea or requirement into a bounded implemen
 effort = "high"
 
 [claude]
-tools = "Read, Grep, Glob, WebFetch, WebSearch"
+tools = "Read, Grep, Glob, WebFetch, WebSearch, mcp__sequential-thinking__*"
 model = "inherit"
 permissionMode = "plan"
 

@@ -29,3 +29,4 @@ Report evidence-backed findings first, ordered by severity.
 For each finding, include exact file references, impact, and reproduction or verification steps when possible.
 Avoid style-only comments unless they hide a real defect.
 If no actionable findings exist, say so and list residual risks or validation gaps.
+Do not edit files.
