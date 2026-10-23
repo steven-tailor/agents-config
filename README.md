@@ -45,6 +45,36 @@ Updates never delete what Claude Code, Codex or you created:
 | Real files in the way | renamed to `<name>.backup-<timestamp>` |
 | Local changes in `~/.agents-config` | update skipped |
 
+## How ship works
+
+`/ship` takes a task to a pull request. The main session orchestrates: it launches each agent, passes context between them, runs the checks, and is the only one that commits. Open product or architecture decisions go to the user before any code is written. Dotted arrows are send-backs: at most 3 rounds for implementation and manual testing, at most 3 for review.
+
+```mermaid
+flowchart TD
+    learn["0. Learn the project<br/>commands, conventions"] --> task["1. Understand the task<br/>acceptance criteria, branch"]
+    task --> arch{"Touches architecture?"}
+    arch -- yes --> architect["solution-architect<br/>design"]
+    arch -- no --> multi{"Several steps or files?"}
+    architect --> planner["planner<br/>bounded plan"]
+    multi -- yes --> planner
+    multi -- no --> behavior{"Behavior to test?"}
+    planner --> behavior
+    behavior -- yes --> writer["test-writer<br/>failing tests"]
+    behavior -- no --> impl["implementer<br/>smallest change"]
+    writer --> impl
+    impl --> checks["Orchestrator checks<br/>lint, typecheck, tests, criteria"]
+    checks -. "test missing or wrong" .-> writer
+    checks -. "red" .-> impl
+    checks -- green --> reviewer["reviewer<br/>fresh each round"]
+    reviewer -. "test findings" .-> writer
+    reviewer -. "blocking or major findings" .-> impl
+    reviewer -- clean --> tester["tester<br/>uses it like a user"]
+    tester -. "failure" .-> impl
+    tester -- pass --> docs["docs-owner<br/>updates stale docs"]
+    docs --> pr["Commit, push, open PR"]
+    pr --> report["Report to the user"]
+```
+
 ## Credits
 
 Third-party skills are fetched from their authors' repos at install time (see `skills.toml`). All credit goes to them:
