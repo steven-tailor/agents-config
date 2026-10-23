@@ -4,7 +4,7 @@ description = "Choose the technical approach for a task that touches architectur
 effort = "high"
 
 [claude]
-tools = "Read, Grep, Glob, WebFetch, WebSearch"
+tools = "Read, Grep, Glob, WebFetch, WebSearch, mcp__serena__*, mcp__context7__*"
 model = "opus"
 permissionMode = "plan"
 

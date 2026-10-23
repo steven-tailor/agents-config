@@ -4,7 +4,7 @@ description = "Audit, organize, and update project documentation when code, beha
 effort = "high"
 
 [claude]
-tools = "Read, Grep, Glob, Edit, Write, WebFetch, WebSearch, Skill"
+tools = "Read, Grep, Glob, Edit, Write, WebFetch, WebSearch, Skill, mcp__context7__*"
 model = "inherit"
 permissionMode = "acceptEdits"
 

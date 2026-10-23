@@ -69,7 +69,7 @@ Only in the Codex version.
 
 - `[claude]` and `[codex]` keys are copied as is into each tool's format.
 - `effort` maps to Claude `effort` and Codex `model_reasoning_effort`.
-- Codex `name` swaps hyphens for underscores. `sandbox_mode` defaults to `workspace-write` when Claude `tools` include an editing tool, else `read-only`; set it in `[codex]` to override.
+- Codex `name` swaps hyphens for underscores. Codex ignores `sandbox_mode` in agent files: agents inherit the parent session's sandbox, so read-only roles rely on a "do not edit" instruction.
 - `<!-- claude -->` / `<!-- codex -->` blocks keep instructions for one tool only. They cannot nest.
 
 The generator records each output's hash in `build/<tool>/manifest.json`. A generated file changed outside the generator (a tool editing it through its symlink) is kept and printed as `kept <file>`; `--force` overwrites it. Stale outputs are removed only if unchanged.

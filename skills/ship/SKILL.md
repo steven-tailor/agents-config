@@ -5,9 +5,9 @@ description: Take a task end-to-end with sub-agents — design and plan, tests f
 
 # Ship a task
 
-You are the orchestrator. Sub-agents cannot spawn sub-agents, so you run every step yourself and pass context between them. Give each agent everything it needs in its prompt: it has not seen this conversation. The project's own instructions decide *how*; this skill only decides *in what order*.
+You are the orchestrator. These agents have no tool to spawn other agents, so you run every step yourself and pass context between them. Give each agent everything it needs in its prompt: it has not seen this conversation. The project's own instructions decide *how*; this skill only decides *in what order*.
 
-Agents: `solution-architect`, `planner`, `implementer`, `reviewer`, `tester`, `docs-owner` (fall back to `general-purpose` if one doesn't exist). In Codex their names use underscores: `solution_architect`, `docs_owner`. Only you commit, push and open the PR; tell every agent not to.
+Agents: `solution-architect`, `planner`, `test-writer`, `implementer`, `reviewer`, `tester`, `docs-owner` (fall back to `general-purpose` if one doesn't exist). In Codex their names use underscores: `solution_architect`, `test_writer`, `docs_owner`. Only you commit, push and open the PR; tell every agent not to.
 
 ## 0. Learn the project
 
@@ -37,28 +37,35 @@ For a single local change (one file, one behavior), skip it and say so in the re
 
 If either agent surfaces a product or architecture decision the task doesn't answer, ask the user before step 3. Otherwise pass the design and the plan, whichever exist, to every later agent.
 
-## 3. Implement (at most 3 rounds)
+## 3. Write tests, then implement (at most 3 rounds)
 
-Launch `implementer` with: the task, the acceptance criteria, the project rules and commands from step 0, the design and plan from step 2, and these instructions:
+When the change has behavior to test, launch `test-writer` with: the task, the acceptance criteria, the project rules and commands from step 0, the design and plan from step 2, and these instructions:
 
-1. Write basic tests for the acceptance criteria first, following the project's existing test patterns. Run them and confirm they fail for the right reason.
-2. Implement the smallest change that makes them pass.
-3. Run lint, typecheck and tests.
-4. Do not commit. Report changed files, test results, and risks.
+1. Write tests for each acceptance criterion, following the project's existing test patterns.
+2. Run them and confirm they fail for the right reason.
+3. Edit only tests and fixtures. Do not commit. Report the test files, the failing output, and any criterion it could not test.
+
+For a change with no behavior to test (docs, config, wording), skip it and say so in the report.
+
+Launch `implementer` with: the task, the acceptance criteria, the project rules and commands from step 0, the design and plan from step 2, the test files from `test-writer`, and these instructions:
+
+1. Implement the smallest change that makes the tests pass. Do not edit the tests; if one looks wrong, report it instead.
+2. Run lint, typecheck and tests.
+3. Do not commit. Report changed files, test results, and risks.
 
 Then check it yourself:
 
 - Run lint, typecheck and tests with the project's commands.
 - Compare the diff with the acceptance criteria: is each one implemented and covered by a test?
 
-If anything is red or a criterion is missing, send the output and the gap back to `implementer`. Each send-back is one round. **At most 3 rounds**: if it's still not done, stop and report to the user.
+If a criterion has no test or a test is wrong, send the gap to `test-writer`; if anything else is red or a criterion is missing, send the output and the gap to `implementer`. Each send-back is one round. **At most 3 rounds**: if it's still not done, stop and report to the user.
 
 ## 4. Review (until clean, at most 3 rounds)
 
 Launch `reviewer` on the branch diff against the base branch. Give it the task, the acceptance criteria, the design and the project rules. Ask for findings ranked by severity, each with file:line and a concrete failure scenario.
 
 - No blocking or major findings: go to step 5.
-- Otherwise send them to `implementer`, re-run the step 3 checks, and review again with a fresh `reviewer`.
+- Otherwise send test findings to `test-writer` and the rest to `implementer`, re-run the step 3 checks, and review again with a fresh `reviewer`.
 
 Repeat until a review finds nothing blocking or major, **at most 3 review rounds**; anything left over goes into the PR description as known issues.
 
@@ -69,7 +76,7 @@ Launch `tester` with: the acceptance criteria, how to run the changed code (step
 **User-facing UI:**
 
 1. Use the `webapp-testing` skill: it starts the app, waits until it responds, and stops it afterwards.
-2. Write a throwaway Python Playwright script outside the repo that walks each acceptance criterion like a user: navigate, click, type, check what's on screen. Take a screenshot per criterion.
+2. Write a throwaway Python Playwright script outside the repo with Bash that walks each acceptance criterion like a user: navigate, click, type, check what's on screen. Take a screenshot per criterion.
 3. If Python Playwright isn't available, report that as a blocker; don't install anything.
 4. Report pass/fail per criterion with screenshot paths, and the exact failure for each fail.
 
@@ -79,7 +86,7 @@ Launch `tester` with: the acceptance criteria, how to run the changed code (step
 2. Cover the error paths too: bad input, missing files, unknown options.
 3. Report pass/fail per criterion with the exact command and its output, and anything that couldn't be tested here (another OS, a real service).
 
-On a blocker, ask the user how to proceed. On a failure, send it to `implementer`, re-run the step 3 checks, and test again. These fixes share the 3-round budget from step 3.
+On a blocker, ask the user how to proceed. On a failure, send it to `implementer` (or to `test-writer` if a test is wrong), re-run the step 3 checks, and test again. These fixes share the 3-round budget from step 3.
 
 ## 6. Update docs
 

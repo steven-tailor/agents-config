@@ -4,7 +4,7 @@ description = "Perform read-only codebase exploration to locate relevant symbols
 effort = "medium"
 
 [claude]
-tools = "Read, Grep, Glob"
+tools = "Read, Grep, Glob, mcp__serena__*"
 model = "haiku"
 permissionMode = "plan"
 
