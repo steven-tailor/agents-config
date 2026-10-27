@@ -47,7 +47,9 @@ Updates never delete what Claude Code, Codex or you created:
 
 ## How ship works
 
-`/ship` takes a task to a pull request. The main session orchestrates: it launches each agent, passes context between them, runs the checks, and is the only one that commits. Open product or architecture decisions go to the user before any code is written. Dotted arrows are send-backs: at most 3 rounds for implementation and manual testing, at most 3 for review.
+`/ship` takes a task to a pull request. The main session orchestrates: it launches each agent, passes context between them, runs the final checks, and is the only one that commits. Open product or architecture decisions go to the user before any code is written. Dotted arrows are send-backs: at most 3 rounds for implementation, manual testing and final checks, at most 2 for review.
+
+To keep token use low, the orchestrator does not read code itself. It passes file paths (design and plan live in `/tmp/ship-<branch>/`) and gives each fresh agent one small task: one plan step or at most 3 findings. Agents read line ranges, not whole files, and report in at most 30 lines. Implementation, test and docs agents run on Sonnet with medium effort; review and architecture stay on Opus.
 
 ```mermaid
 flowchart TD
@@ -59,19 +61,23 @@ flowchart TD
     multi -- yes --> planner
     multi -- no --> behavior{"Behavior to test?"}
     planner --> behavior
-    behavior -- yes --> writer["test-writer<br/>failing tests"]
-    behavior -- no --> impl["implementer<br/>smallest change"]
+    behavior -- "yes, more than a small change" --> writer["test-writer<br/>failing tests"]
+    behavior -- "small change or none" --> impl["implementer<br/>smallest change, one per plan step"]
     writer --> impl
-    impl --> checks["Orchestrator checks<br/>lint, typecheck, tests, criteria"]
+    impl --> checks["Orchestrator checks<br/>diff against criteria"]
     checks -. "test missing or wrong" .-> writer
-    checks -. "red" .-> impl
-    checks -- green --> reviewer["reviewer<br/>fresh each round"]
-    reviewer -. "test findings" .-> writer
-    reviewer -. "blocking or major findings" .-> impl
-    reviewer -- clean --> tester["tester<br/>uses it like a user"]
+    checks -. "red or criterion missing" .-> impl
+    checks -- green --> review1["reviewer round 1<br/>whole branch"]
+    review1 -. "test findings" .-> writer
+    review1 -. "blocking or major, max 3 per agent" .-> impl
+    review1 -- clean --> tester["tester<br/>uses it like a user"]
+    impl -. "after round-1 fixes" .-> review2["reviewer round 2<br/>fixes only"]
+    review2 -- "leftovers become known issues" --> tester
     tester -. "failure" .-> impl
     tester -- pass --> docs["docs-owner<br/>updates stale docs"]
-    docs --> pr["Commit, push, open PR"]
+    docs --> final["Final checks<br/>lint, typecheck, full tests"]
+    final -. "red" .-> impl
+    final -- green --> pr["Commit, push, open PR"]
     pr --> report["Report to the user"]
 ```
 

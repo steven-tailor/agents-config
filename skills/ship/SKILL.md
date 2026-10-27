@@ -7,7 +7,16 @@ description: Take a task end-to-end with sub-agents — design and plan, tests f
 
 You are the orchestrator. These agents have no tool to spawn other agents, so you run every step yourself and pass context between them. Give each agent everything it needs in its prompt: it has not seen this conversation. The project's own instructions decide *how*; this skill only decides *in what order*.
 
-Agents: `solution-architect`, `planner`, `test-writer`, `implementer`, `reviewer`, `tester`, `docs-owner` (fall back to `general-purpose` if one doesn't exist). In Codex their names use underscores: `solution_architect`, `test_writer`, `docs_owner`. Only you commit, push and open the PR; tell every agent not to.
+Agents: `solution-architect`, `planner`, `test-writer`, `implementer`, `reviewer`, `tester`, `docs-owner` (fall back to `general-purpose` if one doesn't exist). In Codex their names use underscores: `solution_architect`, `test_writer`, `docs_owner`. Only you commit, push and open the PR; tell every agent not to commit or stage.
+
+## Context budget
+
+Every agent call re-reads its whole context, so context size drives cost. Keep yours and theirs small:
+
+- Do not read source code yourself; agents do. You read the project rules (step 0), `git diff --stat`, and agent reports.
+- Write the design and the plan to files outside the repo once (e.g. `/tmp/ship-<branch>/design.md`, `plan.md`). Give each agent the paths and name the sections it needs; paste only short items such as acceptance criteria and findings.
+- Ask every agent for a report of at most 30 lines: changed files, check results (failures only), risks, open decisions. No code or full logs.
+- One agent, one small task: at most one plan step or 3 findings. Give the next task to a fresh agent, not a long-running one.
 
 ## 0. Learn the project
 
@@ -35,7 +44,7 @@ When the task spans several steps or files, or the architect ran, launch `planne
 
 For a single local change (one file, one behavior), skip it and say so in the report.
 
-If either agent surfaces a product or architecture decision the task doesn't answer, ask the user before step 3. Otherwise pass the design and the plan, whichever exist, to every later agent.
+If either agent surfaces a product or architecture decision the task doesn't answer, ask the user before step 3. Otherwise save the design and the plan, whichever exist, to files and pass their paths to every later agent.
 
 ## 3. Write tests, then implement (at most 3 rounds)
 
@@ -45,29 +54,30 @@ When the change has behavior to test, launch `test-writer` with: the task, the a
 2. Run them and confirm they fail for the right reason.
 3. Edit only tests and fixtures. Do not commit. Report the test files, the failing output, and any criterion it could not test.
 
-For a change with no behavior to test (docs, config, wording), skip it and say so in the report.
+For a change with no behavior to test (docs, config, wording), skip it and say so in the report. For a small change (one behavior, a few files), skip it too and have `implementer` write the failing test first, then the code.
 
 Launch `implementer` with: the task, the acceptance criteria, the project rules and commands from step 0, the design and plan from step 2, the test files from `test-writer`, and these instructions:
 
 1. Implement the smallest change that makes the tests pass. Do not edit the tests; if one looks wrong, report it instead.
-2. Run lint, typecheck and tests.
-3. Do not commit. Report changed files, test results, and risks.
+2. Run lint, typecheck and the tests for the changed area.
+3. Do not commit. Report changed files, check results, and risks.
 
-Then check it yourself:
+When the plan has several steps, launch one `implementer` per step.
 
-- Run lint, typecheck and tests with the project's commands.
-- Compare the diff with the acceptance criteria: is each one implemented and covered by a test?
+Then compare `git diff --stat` and the reports with the acceptance criteria: is each one implemented and covered by a test? Trust the agents' check results here; you run the full checks once, in step 7.
 
 If a criterion has no test or a test is wrong, send the gap to `test-writer`; if anything else is red or a criterion is missing, send the output and the gap to `implementer`. Each send-back is one round. **At most 3 rounds**: if it's still not done, stop and report to the user.
 
-## 4. Review (until clean, at most 3 rounds)
+## 4. Review (at most 2 rounds)
 
-Launch `reviewer` on the branch diff against the base branch. Give it the task, the acceptance criteria, the design and the project rules. Ask for findings ranked by severity, each with file:line and a concrete failure scenario.
+Round 1: launch `reviewer` on the branch diff against the base branch. Give it the task, the acceptance criteria, the design path and the project rules. Ask for findings ranked by severity, each with file:line and a concrete failure scenario.
 
 - No blocking or major findings: go to step 5.
-- Otherwise send test findings to `test-writer` and the rest to `implementer`, re-run the step 3 checks, and review again with a fresh `reviewer`.
+- Otherwise run `git add -A` to stage the reviewed state. Send test findings to `test-writer` and the rest to `implementer`, at most 3 findings per fresh agent.
 
-Repeat until a review finds nothing blocking or major, **at most 3 review rounds**; anything left over goes into the PR description as known issues.
+Round 2: launch a fresh `reviewer` with the round-1 findings and only the fixes: `git diff` (unstaged changes against the staged, reviewed state). Ask it to confirm each finding is fixed and to review the fixes for new defects.
+
+Blocking or major findings left after round 2 go into the PR description as known issues.
 
 ## 5. Test manually like a user
 
@@ -86,19 +96,19 @@ Launch `tester` with: the acceptance criteria, how to run the changed code (step
 2. Cover the error paths too: bad input, missing files, unknown options.
 3. Report pass/fail per criterion with the exact command and its output, and anything that couldn't be tested here (another OS, a real service).
 
-On a blocker, ask the user how to proceed. On a failure, send it to `implementer` (or to `test-writer` if a test is wrong), re-run the step 3 checks, and test again. These fixes share the 3-round budget from step 3.
+On a blocker, ask the user how to proceed. On a failure, send it to `implementer` (or to `test-writer` if a test is wrong) and test again. These fixes share the 3-round budget from step 3.
 
 ## 6. Update docs
 
-Launch `docs-owner` with: the branch diff, the task, the design from step 2 and the project's docs rules from step 0. Ask it to:
+Launch `docs-owner` with: the base branch (it reads the diff itself), the task, the design path from step 2 and the project's docs rules from step 0. Ask it to:
 
 1. Update the docs the change makes stale: README, `AGENTS.md`/`CLAUDE.md`, usage text, changelog, comments that describe behavior.
 2. Document new functionality or behavior for other agents, using the `writing-for-agents` skill: what an agent working in this repo later needs to know and can't find by reading the code (the convention, the reason behind a choice, the gotcha). Place it where the project keeps agent docs, reached by a pointer in `AGENTS.md`/`CLAUDE.md`.
 3. Not commit, and report each doc it changed or added, or "no docs affected" if nothing needs to change.
 
-If it changed anything, re-run the step 3 checks.
-
 ## 7. Ship
+
+Run lint, typecheck and the full test suite yourself, once, keeping only the failure output. If anything is red, send it to `implementer`; this shares the 3-round budget from step 3.
 
 Follow the project's conventions for commits, changelog, and PR (conventional commits by default). Push and open the PR with: what changed, how it was verified (checks, review summary, manual test results), and any known issues. **Never merge** unless the user explicitly says so.
 
