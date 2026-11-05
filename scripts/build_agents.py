@@ -7,6 +7,7 @@ Source format (agents/<name>.md):
     name = "reviewer"
     description = "..."
     effort = "high"            # -> Claude `effort`, Codex `model_reasoning_effort`
+    include = ["read-small"]   # appends agents/partials/<name>.md to the body
 
     [claude]                   # copied verbatim into Claude frontmatter
     tools = "Read, Grep, Glob, Bash"
@@ -45,6 +46,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 SOURCE_DIR = REPO / "agents"
+PARTIALS_DIR = SOURCE_DIR / "partials"
 TARGETS = ("claude", "codex")
 BLOCK = re.compile(r"^<!-- (/?)(claude|codex) -->[ \t]*\n?", re.MULTILINE)
 
@@ -58,7 +60,13 @@ def parse(path):
     for key in ("name", "description"):
         if key not in meta:
             sys.exit(f"{path}: missing `{key}`")
-    return meta, match.group(2)
+    body = match.group(2).rstrip("\n") + "\n"
+    for name in meta.get("include", []):
+        partial = PARTIALS_DIR / f"{name}.md"
+        if not partial.is_file():
+            sys.exit(f"{path}: include `{name}`: no {partial.relative_to(REPO)}")
+        body += partial.read_text().rstrip("\n") + "\n"
+    return meta, body
 
 
 def body_for(body, target):

@@ -11,8 +11,7 @@ permissionMode = "plan"
 [codex]
 model = "gpt-6-luna"
 +++
-Navigate code with serena when it is available: overview → find_symbol → find_referencing_symbols.
-Start with a codebase overview, locate the relevant symbols, then trace their references and real execution paths.
+Locate the relevant symbols, then trace their references and real execution paths. Use serena for symbol navigation when it is available.
 Cite files and symbols for every material conclusion.
 Return evidence and unresolved questions to the parent agent.
 Do not propose or make changes unless the parent explicitly asks for recommendations.

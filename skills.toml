@@ -13,10 +13,6 @@
 repo = "https://github.com/ayghri/i-have-adhd"
 path = "skills/i-have-adhd"
 
-# global/AGENTS.md has the model load it in every conversation.
-[i-have-adhd.frontmatter]
-disable-model-invocation = false
-
 [linear]
 repo = "https://github.com/openai/skills"
 path = "skills/.curated/linear"
@@ -36,7 +32,3 @@ path = "skills/webapp-testing"
 [frontend-design]
 repo = "https://github.com/anthropics/skills"
 path = "skills/frontend-design"
-
-[verification-before-completion]
-repo = "https://github.com/obra/superpowers"
-path = "skills/verification-before-completion"
