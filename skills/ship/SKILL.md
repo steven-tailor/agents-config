@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Take a task end-to-end with sub-agents — design and plan, tests first, implement, verify (lint, types, tests), review until clean, test manually like a user, update docs, commit and open a PR. Use when the user says /ship, "ship it", "ship me X", "take this task", "finish/end the task", or hands over a task or issue to be delivered as a PR.
+description: Deliver a task as a PR with sub-agents: design, tests first, implement, review, manual test, docs. Use for /ship, "ship it", or a task handed over to be delivered as a PR.
 ---
 
 # Ship a task
@@ -15,7 +15,7 @@ Every agent call re-reads its whole context, so context size drives cost. Keep y
 
 - Do not read source code yourself; agents do. You read the project rules (step 0), `git diff --stat`, and agent reports.
 - Write the design and the plan to files outside the repo once (e.g. `/tmp/ship-<branch>/design.md`, `plan.md`). Give each agent the paths and name the sections it needs; paste only short items such as acceptance criteria and findings.
-- Ask every agent for a report of at most 30 lines: changed files, check results (failures only), risks, open decisions. No code or full logs.
+- Every agent above reports in at most 30 lines (its `report` partial). Ask the same of a `general-purpose` fallback.
 - One agent, one small task: at most one plan step or 3 findings. Give the next task to a fresh agent, not a long-running one.
 
 ## 0. Learn the project
@@ -48,19 +48,11 @@ If either agent surfaces a product or architecture decision the task doesn't ans
 
 ## 3. Write tests, then implement (at most 3 rounds)
 
-When the change has behavior to test, launch `test-writer` with: the task, the acceptance criteria, the project rules and commands from step 0, the design and plan from step 2, and these instructions:
-
-1. Write tests for each acceptance criterion, following the project's existing test patterns.
-2. Run them and confirm they fail for the right reason.
-3. Edit only tests and fixtures. Do not commit. Report the test files, the failing output, and any criterion it could not test.
+When the change has behavior to test, launch `test-writer` with: the task, the acceptance criteria, the project rules and commands from step 0, and the design and plan from step 2. Ask for the test files, the failing output, and any criterion it could not test.
 
 For a change with no behavior to test (docs, config, wording), skip it and say so in the report. For a small change (one behavior, a few files), skip it too and have `implementer` write the failing test first, then the code.
 
-Launch `implementer` with: the task, the acceptance criteria, the project rules and commands from step 0, the design and plan from step 2, the test files from `test-writer`, and these instructions:
-
-1. Implement the smallest change that makes the tests pass. Do not edit the tests; if one looks wrong, report it instead.
-2. Run lint, typecheck and the tests for the changed area.
-3. Do not commit. Report changed files, check results, and risks.
+Launch `implementer` with: the task, the acceptance criteria, the project rules and commands from step 0, the design and plan from step 2, and the test files from `test-writer`. Tell it to make those tests pass without editing them, to report a test that looks wrong, and to run lint and typecheck too.
 
 When the plan has several steps, launch one `implementer` per step.
 
@@ -83,18 +75,7 @@ Blocking or major findings left after round 2 go into the PR description as know
 
 Launch `tester` with: the acceptance criteria, how to run the changed code (step 0), and the instructions for the kind of change.
 
-**User-facing UI:**
-
-1. Use the `webapp-testing` skill: it starts the app, waits until it responds, and stops it afterwards.
-2. Write a throwaway Python Playwright script outside the repo with Bash that walks each acceptance criterion like a user: navigate, click, type, check what's on screen. Take a screenshot per criterion.
-3. If Python Playwright isn't available, report that as a blocker; don't install anything.
-4. Report pass/fail per criterion with screenshot paths, and the exact failure for each fail.
-
-**No UI** (CLI, script, library, API, config):
-
-1. Exercise each acceptance criterion the way a user or caller would: run the command or script, call the endpoint or function, from a scratch directory outside the repo where possible.
-2. Cover the error paths too: bad input, missing files, unknown options.
-3. Report pass/fail per criterion with the exact command and its output, and anything that couldn't be tested here (another OS, a real service).
+Read [references/manual-test.md](references/manual-test.md) and pass the procedure for the kind of change (UI or no UI).
 
 On a blocker, ask the user how to proceed. On a failure, send it to `implementer` (or to `test-writer` if a test is wrong) and test again. These fixes share the 3-round budget from step 3.
 

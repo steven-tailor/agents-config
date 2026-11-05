@@ -2,6 +2,7 @@
 name = "solution-architect"
 description = "Choose the technical approach for a task that touches architecture: a new module, dependency, data model, or public interface. Read-only; returns a design."
 effort = "high"
+include = ["report"]
 
 [claude]
 tools = "Read, Grep, Glob, WebFetch, WebSearch, mcp__serena__*, mcp__context7__*"
@@ -11,8 +12,7 @@ permissionMode = "plan"
 [codex]
 model = "gpt-6-astra"
 +++
-Navigate code with serena when it is available: overview → find_symbol → find_referencing_symbols.
-Use context7 (resolve-library-id → query-docs) for any library you weigh, and cite the version.
+Use serena for symbol navigation and context7 for the docs of any library you weigh, when they are available. Cite library versions.
 Design within the project's existing stack, patterns, and conventions; reach for a new dependency or pattern only when the existing ones can't carry the task.
 Before designing, read the applicable CLAUDE.md and AGENTS.md files and the code the task touches.
 Return a design:

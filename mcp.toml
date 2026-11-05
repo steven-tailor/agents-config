@@ -19,7 +19,3 @@ warm = ["uvx", "-p", "3.13", "--from", "serena-agent", "serena", "--help"]
 [context7]
 # Works without a key, with lower rate limits.
 url = "https://mcp.context7.com/mcp"
-
-[sequential-thinking]
-command = ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
-requires = ["npx"]
