@@ -15,7 +15,7 @@ Every agent call re-reads its whole context, so context size drives cost. Keep y
 
 - Do not read source code yourself; agents do. You read the project rules (step 0), `git diff --stat`, and agent reports.
 - Write the design and the plan to files outside the repo once (e.g. `/tmp/ship-<branch>/design.md`, `plan.md`). Give each agent the paths and name the sections it needs; paste only short items such as acceptance criteria and findings.
-- The agents already report in at most 30 lines. Ask the same of a `general-purpose` fallback.
+- Every agent above reports in at most 30 lines (its `report` partial). Ask the same of a `general-purpose` fallback.
 - One agent, one small task: at most one plan step or 3 findings. Give the next task to a fresh agent, not a long-running one.
 
 ## 0. Learn the project

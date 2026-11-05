@@ -2,6 +2,7 @@
 name = "planner"
 description = "Structure an approved idea or requirement into a bounded implementation plan before code changes begin."
 effort = "high"
+include = ["report"]
 
 [claude]
 tools = "Read, Grep, Glob, WebFetch, WebSearch"

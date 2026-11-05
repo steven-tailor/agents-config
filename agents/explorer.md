@@ -2,6 +2,7 @@
 name = "explorer"
 description = "Perform read-only codebase exploration to locate relevant symbols, execution paths, and references before planning or implementation."
 effort = "medium"
+include = ["report"]
 
 [claude]
 tools = "Read, Grep, Glob, mcp__serena__*"

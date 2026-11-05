@@ -2,7 +2,7 @@
 name = "implementer"
 description = "Turn an approved specification or task into the smallest coherent, validated code change."
 effort = "medium"
-include = ["read-small", "tests-small", "report-edits"]
+include = ["read-small", "tests-small", "report"]
 
 [claude]
 tools = "Read, Grep, Glob, Bash, Edit, Write"

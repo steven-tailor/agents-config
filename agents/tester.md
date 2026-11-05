@@ -2,7 +2,7 @@
 name = "tester"
 description = "Validate changed behavior, find regressions, and identify missing test coverage after implementation or review."
 effort = "medium"
-include = ["read-small", "report-readonly"]
+include = ["read-small", "report"]
 
 [claude]
 tools = "Read, Grep, Glob, Bash, Skill"

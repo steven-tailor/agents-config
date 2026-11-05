@@ -2,6 +2,7 @@
 name = "solution-architect"
 description = "Choose the technical approach for a task that touches architecture: a new module, dependency, data model, or public interface. Read-only; returns a design."
 effort = "high"
+include = ["report"]
 
 [claude]
 tools = "Read, Grep, Glob, WebFetch, WebSearch, mcp__serena__*, mcp__context7__*"

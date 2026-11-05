@@ -2,7 +2,7 @@
 name = "docs-owner"
 description = "Audit, organize, and update project documentation when code, behavior, structure, or public interfaces change."
 effort = "medium"
-include = ["read-small", "report-edits"]
+include = ["read-small", "report"]
 
 [claude]
 tools = "Read, Grep, Glob, Edit, Write, WebFetch, WebSearch, Skill, mcp__context7__*"

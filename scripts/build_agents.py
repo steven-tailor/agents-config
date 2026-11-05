@@ -61,7 +61,10 @@ def parse(path):
         if key not in meta:
             sys.exit(f"{path}: missing `{key}`")
     body = match.group(2).rstrip("\n") + "\n"
-    for name in meta.get("include", []):
+    includes = meta.get("include", [])
+    if not isinstance(includes, list) or not all(isinstance(n, str) for n in includes):
+        sys.exit(f"{path}: `include` must be a list of partial names")
+    for name in includes:
         partial = PARTIALS_DIR / f"{name}.md"
         if not partial.is_file():
             sys.exit(f"{path}: include `{name}`: no {partial.relative_to(REPO)}")

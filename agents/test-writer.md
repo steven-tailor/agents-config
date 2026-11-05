@@ -2,7 +2,7 @@
 name = "test-writer"
 description = "Write failing tests for approved acceptance criteria before the implementation exists."
 effort = "medium"
-include = ["read-small", "tests-small", "report-edits"]
+include = ["read-small", "tests-small", "report"]
 
 [claude]
 tools = "Read, Grep, Glob, Bash, Edit, Write"

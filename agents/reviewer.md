@@ -2,7 +2,7 @@
 name = "reviewer"
 description = "Review code after implementation for correctness, security, regressions, maintainability, and missing tests."
 effort = "high"
-include = ["read-small"]
+include = ["read-small", "report"]
 
 [claude]
 tools = "Read, Grep, Glob, Bash"

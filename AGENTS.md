@@ -43,7 +43,7 @@ Rule: never destroy what the tools or the user created.
 
 ## Agents
 
-Write each agent once in `agents/<name>.md`: TOML frontmatter between `+++` lines, then instructions. See `agents/implementer.md` for a full example and the `scripts/build_agents.py` docstring for the format.
+Write each agent once in `agents/<name>.md`: TOML frontmatter between `+++` lines, then instructions. See `agents/implementer.md` for a typical agent. The `scripts/build_agents.py` docstring shows every key and the `<!-- claude -->`/`<!-- codex -->` blocks.
 
 - `[claude]` and `[codex]` keys are copied as is into each tool's format.
 - `effort` maps to Claude `effort` and Codex `model_reasoning_effort`.
@@ -62,7 +62,7 @@ Validate after editing: `python3 scripts/build_agents.py`.
 - Do not vendor [mattpocock/skills](https://github.com/mattpocock/skills). `plugins.toml` installs it: the Claude Code plugin, and skills.sh for Codex (Codex doesn't read its `.claude-plugin` marketplace yet). Agents may depend on it.
 - Never copy third-party skills into `skills/`. Add them to `skills.toml` and credit the source in the README `Credits` section. A name must not exist in both.
 - `fetch_skills.py` resets one shallow, sparse clone per repo in `build/external/sources/` and copies each skill into `build/external/skills/`. A `[<name>.frontmatter]` table replaces or adds keys in the copied `SKILL.md`.
-- External skills are hashed in `build/external/manifest.json`. One changed outside the script is kept (`--force` overwrites it). Skills dropped from `skills.toml` are removed only if unchanged.
+- External skills are hashed in `build/external/manifest.json`. One changed outside the script is kept and printed as `kept <name>` (`--force` overwrites it). A failed fetch keeps the previous copy and prints `failed <name>: <reason>`. Skills dropped from `skills.toml` are removed only if unchanged.
 - Validate after editing: `python3 scripts/fetch_skills.py`.
 
 ## Plugins and MCP servers
@@ -70,6 +70,7 @@ Validate after editing: `python3 scripts/build_agents.py`.
 The header comments of `plugins.toml` and `mcp.toml` document their formats.
 
 - Never reinstall or update: an entry is skipped when the tool already has the plugin, a marker skill from `skills`, or an MCP server with that name. Plugins update themselves.
-- A failed install warns and never stops `install.sh`.
+- `install_plugins.py` and `install_mcp.py` print `installed`, `present`, `skipped` or `failed <name>: <reason>`. A missing CLI or `npx` skips the entry, and a failure warns and never stops `install.sh`. `--dry-run` installs nothing.
+- Codex marker skills are looked up in `$CODEX_HOME/skills` and `~/.agents/skills`. An MCP server whose `requires` CLI is missing is skipped.
 - `mcp.toml` lists the MCP servers the agents name. An agent that names a server needs its entry here.
 - Keep both tools equal: agent instructions are shared, `<!-- claude -->`/`<!-- codex -->` blocks only for what the other tool lacks, and every skill and MCP server installs into both.
